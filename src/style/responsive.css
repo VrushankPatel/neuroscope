@@ -1,0 +1,84 @@
+/* Responsive Design Rules */
+@media (max-width: 1024px) {
+  .top-nav {
+    left: 16px;
+    right: 16px;
+  }
+
+  .nav-btn span {
+    display: none;
+  }
+
+  .info-panel {
+    width: 320px;
+    right: 16px;
+  }
+
+  .explored-controls {
+    left: 16px;
+    width: 190px;
+  }
+}
+
+@media (max-width: 768px) {
+  .top-nav {
+    height: 48px;
+    top: 10px;
+    left: 10px;
+    right: 10px;
+    padding: 0 10px;
+  }
+
+  .brand-subtitle {
+    display: none;
+  }
+
+  .landing-overlay {
+    padding: 70px 20px 20px 20px;
+  }
+
+  .hero-title {
+    font-size: 1.8rem;
+  }
+
+  .thought-cards-grid {
+    flex-direction: column;
+  }
+
+  .info-panel {
+    position: fixed;
+    top: auto;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    width: 100%;
+    height: 60vh;
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  }
+
+  .info-panel.hidden {
+    transform: translateY(100%);
+  }
+
+  .explored-controls {
+    top: 65px;
+    left: 10px;
+    width: 160px;
+    padding: 10px;
+  }
+
+  .semantic-legend {
+    display: none;
+  }
+
+  .timeline-container {
+    width: calc(100vw - 20px);
+    bottom: 10px;
+    padding: 10px;
+  }
+
+  .step-explanation {
+    max-width: 180px;
+    font-size: 0.75rem;
+  }
+}

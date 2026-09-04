@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NeuroScope — Interactive 3D Neuroanatomy & Neural Network Laboratory</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <script>
+    (function() {
+      var savedTheme = localStorage.getItem('neuroscope-theme');
+      if (savedTheme) {
+        document.documentElement.setAttribute('data-theme', savedTheme);
+      }
+    })();
+  </script>
+  <script type="module" crossorigin src="/assets/index-DXsAu3qe.js"></script>
+  <link rel="stylesheet" crossorigin href="/assets/index-4kU-NFXm.css">
+</head>
+<body>
+  <div id="app">
+    <!-- Top Navigation Glass Header -->
+    <header class="top-nav">
+      <div class="nav-brand">
+        <div class="logo-mark">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+            <path d="M12 2a10 10 0 0 0-10 10c0 5.523 4.477 10 10 10s10-4.477 10-10A10 10 0 0 0 12 2z"></path>
+            <circle cx="12" cy="12" r="3" fill="currentColor"></circle>
+          </svg>
+        </div>
+        <span class="brand-name">NeuroScope</span>
+      </div>
+
+      <nav class="nav-links">
+        <button class="nav-btn active" data-mode="explore">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/></svg>
+          Anatomy
+        </button>
+        <button class="nav-btn" data-mode="network">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+          Neural Network
+        </button>
+        <button class="nav-btn" data-mode="pathways">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+          Pathways
+        </button>
+        <button class="nav-btn" data-mode="cellular">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          Cellular
+        </button>
+        <button class="nav-btn" data-mode="clinical">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+          Clinical
+        </button>
+        <button class="nav-btn" data-mode="quiz">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+          Quiz
+        </button>
+      </nav>
+
+      <div class="nav-controls">
+        <button class="icon-btn search-trigger" title="Search Anatomy & Pathways (Cmd+K)">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <span class="kbd-shortcut">⌘K</span>
+        </button>
+        <button class="icon-btn" id="btn-toggle-network" title="Toggle Neural Network Overlay">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M3 12h3m12 0h3M12 3v3m0 12v3"/></svg>
+          <span>Net</span>
+        </button>
+        <button class="icon-btn" id="theme-toggle" title="Toggle Theme (Dark / Light)">
+          <svg class="theme-icon-dark" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+          <svg class="theme-icon-light" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/></svg>
+        </button>
+        <select id="quality-select" class="select-clean">
+          <option value="auto">Auto</option>
+          <option value="high">High</option>
+          <option value="medium">Med</option>
+          <option value="low">Low</option>
+        </select>
+      </div>
+    </header>
+
+    <!-- 3D Canvas Viewport -->
+    <div id="canvas-container"></div>
+
+    <!-- Streamlined Left Dock Controls -->
+    <div class="explored-controls glass-panel">
+      <div class="control-group">
+        <label for="opacity-slider" class="control-label">
+          <span>Shell Opacity</span>
+          <span id="opacity-val">36%</span>
+        </label>
+        <input type="range" id="opacity-slider" min="0" max="100" value="36" />
+      </div>
+
+      <div class="control-actions">
+        <button class="btn btn-primary btn-sm" id="btn-enter-brain" title="Fly camera inside the brain">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="m10 8 4 4-4 4"/></svg>
+          Enter Brain
+        </button>
+        <button class="btn btn-secondary btn-sm" id="btn-exploded">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+          Explode View
+        </button>
+        <button class="btn btn-secondary btn-sm" id="btn-reset-view">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+          Reset View
+        </button>
+        <button class="btn btn-secondary btn-sm" id="btn-auto-spin">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M2.13 15.57a9 9 0 1 0 3.87-10.46l-4-4"/></svg>
+          Auto Spin
+        </button>
+      </div>
+    </div>
+
+    <!-- Random Facts Widget (Bottom Right) -->
+    <div id="facts-widget" class="facts-widget glass-panel">
+      <div class="facts-header">Did you know?</div>
+      <div id="fact-text" class="fact-text">Loading fact...</div>
+    </div>
+
+    <!-- Minimal Spatial Scenario Chips (Bottom Left) -->
+    <div class="scenario-chips-dock" id="landing-overlay">
+      <span class="dock-label">Functional Scenarios:</span>
+      <div class="thought-cards-grid" id="thought-cards">
+        <!-- Dynamically rendered minimal thought pills -->
+      </div>
+    </div>
+
+    <!-- Right Side Context Panel -->
+    <aside id="info-panel" class="info-panel glass-panel hidden">
+      <button class="panel-close-btn" id="close-panel-btn">&times;</button>
+      
+      <div class="panel-header">
+        <span class="structure-badge" id="panel-category">Cortical Region</span>
+        <h2 class="structure-title" id="panel-title">Primary Motor Cortex</h2>
+        <span class="structure-latin" id="panel-latin">Cortex motorius primarius</span>
+      </div>
+
+      <div class="panel-body">
+        <section class="info-section">
+          <h3>Location</h3>
+          <p id="panel-location">Precentral gyrus of the frontal lobe.</p>
+        </section>
+
+        <section class="info-section">
+          <h3>Function</h3>
+          <p id="panel-function">Executes voluntary somatic movement control over skeletal muscles.</p>
+        </section>
+
+        <section class="info-section">
+          <h3>Major Connections</h3>
+          <ul id="panel-connections" class="connections-list">
+            <li>Premotor cortex</li>
+            <li>Corticospinal tract</li>
+          </ul>
+        </section>
+
+        <section class="info-section">
+          <h3>Clinical Relevance</h3>
+          <div class="clinical-box" id="panel-clinical">
+            Lesions produce contralateral spastic paresis.
+          </div>
+        </section>
+      </div>
+
+      <div class="panel-footer">
+        <button class="btn btn-primary" id="btn-trace-pathway">Trace Pathway</button>
+        <button class="btn btn-secondary" id="btn-explain-structure">Explain</button>
+        <button class="btn btn-secondary" id="btn-quiz-structure">Quiz</button>
+      </div>
+    </aside>
+
+    <!-- Bottom Simulation Timeline Container -->
+    <div id="timeline-container" class="timeline-container glass-panel hidden">
+      <div class="timeline-header">
+        <div class="scenario-meta">
+          <span class="scenario-badge">Active Simulation</span>
+          <span class="scenario-title" id="timeline-scenario-title">Raise right arm</span>
+        </div>
+        
+        <div class="step-explanation" id="timeline-step-explanation">
+          Intention & Motor Planning — Prefrontal cortex initiates movement goal.
+        </div>
+
+        <button class="btn btn-icon-sm" id="timeline-close-btn">&times;</button>
+      </div>
+
+      <div class="timeline-scrubber">
+        <span class="time-label" id="current-time">0.0s</span>
+        <div class="scrubber-track-container" id="scrubber-track">
+          <div class="scrubber-fill" id="scrubber-fill"></div>
+          <div class="scrubber-handle" id="scrubber-handle"></div>
+        </div>
+        <span class="time-label" id="total-time">3.5s</span>
+      </div>
+
+      <div class="timeline-controls">
+        <div class="playback-buttons">
+          <button class="ctrl-btn primary" id="btn-play-pause">
+            <svg class="icon-play" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+            <svg class="icon-pause hidden" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
+          </button>
+          <button class="ctrl-btn" id="btn-replay">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+          </button>
+        </div>
+
+        <div class="speed-selector">
+          <button class="speed-btn" data-speed="0.25">0.25x</button>
+          <button class="speed-btn" data-speed="0.5">0.5x</button>
+          <button class="speed-btn active" data-speed="1">1.0x</button>
+          <button class="speed-btn" data-speed="2">2.0x</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Cellular Micro-Explorer Panel -->
+    <div id="cellular-panel" class="cellular-panel glass-panel hidden">
+      <div class="cellular-header">
+        <h2>Micro-Scale Neural Signaling</h2>
+        <div class="cellular-tabs">
+          <button class="tab-btn active" data-cell-tab="neuron">Action Potential</button>
+          <button class="tab-btn" data-cell-tab="synapse">Synaptic Transmission</button>
+        </div>
+      </div>
+
+      <div class="cellular-content">
+        <div id="cell-tab-neuron" class="cell-tab-content">
+          <div class="oscilloscope-card">
+            <div class="card-header">
+              <span>Membrane Potential</span>
+              <span class="voltage-badge" id="membrane-voltage">-70 mV</span>
+            </div>
+            <canvas id="oscilloscope-canvas" width="320" height="120"></canvas>
+            <div class="oscilloscope-controls">
+              <button class="btn btn-sm btn-primary" id="btn-trigger-ap">Fire Action Potential</button>
+              <span class="state-indicator" id="ap-phase">Resting State</span>
+            </div>
+          </div>
+        </div>
+
+        <div id="cell-tab-synapse" class="cell-tab-content hidden">
+          <div class="synapse-card">
+            <div class="card-header">
+              <span>Neurotransmitter</span>
+              <select id="nt-selector" class="select-sm">
+                <option value="glutamate">Glutamate</option>
+                <option value="gaba">GABA</option>
+                <option value="dopamine">Dopamine</option>
+                <option value="acetylcholine">Acetylcholine</option>
+              </select>
+            </div>
+            <div class="nt-description" id="nt-desc">
+              Primary excitatory neurotransmitter triggering EPSP membrane depolarization.
+            </div>
+            <button class="btn btn-sm btn-primary" id="btn-trigger-synapse">Release Vesicles</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Search Modal -->
+    <div id="search-modal" class="modal-overlay hidden">
+      <div class="search-dialog glass-panel">
+        <div class="search-header">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input type="text" id="search-input" placeholder="Search anatomy, pathways, functions..." autofocus />
+          <button class="modal-close" id="close-search-btn">&times;</button>
+        </div>
+        <div class="search-results" id="search-results"></div>
+      </div>
+    </div>
+
+    <!-- Explain Modal -->
+    <div id="explain-modal" class="modal-overlay hidden">
+      <div class="explain-dialog glass-panel">
+        <div class="explain-header">
+          <h2 id="explain-title">Structure Explanation</h2>
+          <button class="modal-close" id="close-explain-btn">&times;</button>
+        </div>
+        <div class="explain-depth-tabs">
+          <button class="depth-tab active" data-level="introductory">Introductory</button>
+          <button class="depth-tab" data-level="medical_student">Medical Student</button>
+          <button class="depth-tab" data-level="advanced">Advanced</button>
+        </div>
+        <div class="explain-content" id="explain-body"></div>
+      </div>
+    </div>
+
+    <!-- Clinical Case Overlay -->
+    <div id="clinical-modal" class="clinical-overlay glass-panel hidden">
+      <div class="clinical-header">
+        <span class="case-badge">Clinical Vignette</span>
+        <h2 id="case-title">Case 01: Acute Arm Weakness</h2>
+      </div>
+      <p class="case-history" id="case-history">History details...</p>
+      <div class="case-prompt"><strong>Localization:</strong> Click the affected 3D structure on the brain model.</div>
+      <div class="case-feedback hidden" id="case-feedback"></div>
+    </div>
+
+    <!-- Quiz Overlay -->
+    <div id="quiz-modal" class="quiz-overlay glass-panel hidden">
+      <div class="quiz-header">
+        <div class="quiz-score">Score: <strong id="quiz-score-val">0</strong> | Question: <strong id="quiz-q-num">1/5</strong></div>
+        <button class="btn btn-sm btn-secondary" id="btn-exit-quiz">Exit Quiz</button>
+      </div>
+      <div class="quiz-body" id="quiz-body"></div>
+    </div>
+
+    <!-- Interactive Anatomy Hover Tooltip -->
+    <div id="anatomy-tooltip" class="anatomy-tooltip glass-panel hidden">
+      <div class="tooltip-header">
+        <span class="tooltip-badge" id="tooltip-badge">CORTICAL REGION</span>
+        <h4 class="tooltip-name" id="tooltip-name">Primary Motor Cortex</h4>
+      </div>
+      <p class="tooltip-desc" id="tooltip-desc">Executes voluntary somatic movement control over skeletal muscles.</p>
+      <div class="tooltip-hint" id="tooltip-hint">Click to dive inside &rarr;</div>
+    </div>
+
+    <!-- Loading Screen -->
+    <div id="loading-screen" class="loading-screen">
+      <div class="spinner-wrap">
+        <div class="spinner-ring"></div>
+        <div class="spinner-logo">NeuroScope</div>
+      </div>
+      <div class="loading-status" id="loading-status">Loading 3D human neuroanatomy...</div>
+    </div>
+
+    <!-- Debug Monitor -->
+    <div id="debug-overlay" class="debug-overlay hidden">
+      <div id="debug-fps">FPS: --</div>
+      <div id="debug-calls">Calls: --</div>
+      <div id="debug-triangles">Tris: --</div>
+    </div>
+  </div>
+
+</body>
+</html>

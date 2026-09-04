@@ -1,0 +1,107 @@
+--- src/network/NeuralNetworkGraph.js
++++ src/network/NeuralNetworkGraph.js
+@@ -19,6 +19,7 @@
+     this.lightningGroup.name = "NeuralLightningStrikes";
+     this.networkGroup.add(this.lightningGroup);
+ 
+     this.lastSpontaneousLightningTime = 0;
++    this.lastActiveRegionLightningTime = 0;
+   }
+ 
+   // Build uniform, whole-brain neural network directly from authentic brain mesh vertices
+@@ -115,6 +116,7 @@
+     ctx.fill();
+ 
+     const nodeTexture = new THREE.CanvasTexture(canvas);
++    this.nodeTexture = nodeTexture;
+ 
+     const nodeMaterial = new THREE.PointsMaterial({
+       size: 0.038, // Delicate pinpoint nodes
+@@ -271,6 +273,43 @@
+     this.triggerLightningStrike(sNode, tNode, colorHex, 3);
+   }
+ 
++  setActiveScenarioRegion(regionId, colorHex) {
++    if (this.activeNodesGroup) {
++      this.networkGroup.remove(this.activeNodesGroup);
++      this.activeNodesGroup.geometry.dispose();
++      this.activeNodesGroup.material.dispose();
++      this.activeNodesGroup = null;
++    }
++    this.activeScenarioNodes = null;
++    this.activeScenarioColor = null;
++
++    if (!regionId) return;
++
++    const activeNodes = this.allNodes.filter(n => n.structureId === regionId);
++    if (activeNodes.length === 0) return;
++
++    this.activeScenarioNodes = activeNodes;
++    this.activeScenarioColor = colorHex || "#FFEA00";
++
++    const positions = [];
++    const colors = [];
++    const c = new THREE.Color(this.activeScenarioColor);
++    
++    activeNodes.forEach(n => {
++      positions.push(n.pos.x, n.pos.y, n.pos.z);
++      colors.push(c.r, c.g, c.b);
++    });
++
++    const geom = new THREE.BufferGeometry();
++    geom.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
++    geom.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
++
++    const mat = new THREE.PointsMaterial({
++      size: 0.08,
++      map: this.nodeTexture,
++      transparent: true,
++      opacity: 0.9,
++      vertexColors: true,
++      blending: THREE.AdditiveBlending,
++      depthWrite: false
++    });
++
++    this.activeNodesGroup = new THREE.Points(geom, mat);
++    this.networkGroup.add(this.activeNodesGroup);
++  }
++
+   update(delta, time) {
+     if (!this.networkGroup.visible) return;
+ 
+@@ -321,6 +360,20 @@
+         this.triggerLightningStrike(n1.pos, n2.pos, "#38BDF8", 2);
+       }
+     }
++
++    // 4. Pulse the active scenario region and fire intense local lightning
++    if (this.activeNodesGroup) {
++      this.activeNodesGroup.material.opacity = 0.6 + Math.sin(time * 12) * 0.4;
++      
++      if (time - this.lastActiveRegionLightningTime > 0.4 && this.activeScenarioNodes && this.activeScenarioNodes.length > 5) {
++        this.lastActiveRegionLightningTime = time;
++        const n1 = this.activeScenarioNodes[Math.floor(Math.random() * this.activeScenarioNodes.length)];
++        const n2 = this.activeScenarioNodes[Math.floor(Math.random() * this.activeScenarioNodes.length)];
++        if (n1 && n2 && n1.pos.distanceTo(n2.pos) > 0.1) {
++           this.triggerLightningStrike(n1.pos, n2.pos, this.activeScenarioColor, 2);
++        }
++      }
++    }
+   }
+ 
+   show() {
+@@ -347,6 +400,14 @@
+     this.activeLightningBranches = [];
+ 
+     this.lightningGroup = new THREE.Group();
+     this.lightningGroup.name = "NeuralLightningStrikes";
+     this.networkGroup.add(this.lightningGroup);
++
++    if (this.activeNodesGroup) {
++      this.networkGroup.remove(this.activeNodesGroup);
++      this.activeNodesGroup = null;
++    }
++    this.activeScenarioNodes = null;
++    this.activeScenarioColor = null;
+   }
+ }
