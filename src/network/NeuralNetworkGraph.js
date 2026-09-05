@@ -116,7 +116,7 @@ export class NeuralNetworkGraph {
     const nodeTexture = new THREE.CanvasTexture(canvas);
     this.nodeTexture = nodeTexture;
 
-    const nodeMaterial = new THREE.PointsMaterial({
+    this.nodeMaterial = new THREE.PointsMaterial({
       size: 0.038, // Delicate pinpoint nodes
       map: nodeTexture,
       transparent: true,
@@ -126,7 +126,7 @@ export class NeuralNetworkGraph {
       depthWrite: false
     });
 
-    const nodePoints = new THREE.Points(nodeGeometry, nodeMaterial);
+    const nodePoints = new THREE.Points(nodeGeometry, this.nodeMaterial);
     this.networkGroup.add(nodePoints);
 
     // 3. Render Fine Axon Fibers Across the Whole Brain
@@ -141,14 +141,14 @@ export class NeuralNetworkGraph {
     const edgeGeometry = new THREE.BufferGeometry();
     edgeGeometry.setAttribute('position', new THREE.Float32BufferAttribute(linePositions, 3));
 
-    const edgeMaterial = new THREE.LineBasicMaterial({
+    this.edgeMaterial = new THREE.LineBasicMaterial({
       color: 0x38BDF8,
       transparent: true,
       opacity: 0.12, // Subtle, whisper-thin filaments across the whole brain
       blending: THREE.AdditiveBlending
     });
 
-    const edgeLines = new THREE.LineSegments(edgeGeometry, edgeMaterial);
+    const edgeLines = new THREE.LineSegments(edgeGeometry, this.edgeMaterial);
     this.networkGroup.add(edgeLines);
 
     // 4. Background Spiking Action Potential Stream
@@ -168,7 +168,7 @@ export class NeuralNetworkGraph {
     const pulsePositions = new Float32Array(this.pulses.length * 3);
     pulseGeometry.setAttribute('position', new THREE.BufferAttribute(pulsePositions, 3));
 
-    const pulseMaterial = new THREE.PointsMaterial({
+    this.pulseMaterial = new THREE.PointsMaterial({
       color: 0x00E5FF,
       size: 0.048,
       map: nodeTexture,
@@ -178,8 +178,13 @@ export class NeuralNetworkGraph {
       depthWrite: false
     });
 
-    this.pulsePoints = new THREE.Points(pulseGeometry, pulseMaterial);
+    this.pulsePoints = new THREE.Points(pulseGeometry, this.pulseMaterial);
     this.networkGroup.add(this.pulsePoints);
+    
+    // Apply current theme
+    if (this.currentTheme) {
+      this.setTheme(this.currentTheme);
+    }
   }
 
   // Trigger electric branching lightning strike when neurons activate for something
@@ -239,7 +244,7 @@ export class NeuralNetworkGraph {
         color: new THREE.Color(colorHex),
         transparent: true,
         opacity: 1.0,
-        blending: THREE.AdditiveBlending
+        blending: (this.currentTheme === 'light') ? THREE.NormalBlending : THREE.AdditiveBlending
       });
 
       const line = new THREE.LineSegments(geom, mat);
@@ -309,7 +314,7 @@ export class NeuralNetworkGraph {
       transparent: true,
       opacity: 0.9,
       vertexColors: true,
-      blending: THREE.AdditiveBlending,
+      blending: (this.currentTheme === 'light') ? THREE.NormalBlending : THREE.AdditiveBlending,
       depthWrite: false
     });
 
@@ -380,6 +385,53 @@ export class NeuralNetworkGraph {
         if (n1 && n2 && n1.pos.distanceTo(n2.pos) > 0.05) {
            this.triggerLightningStrike(n1.pos, n2.pos, this.activeScenarioColor, 2);
         }
+      }
+    }
+  }
+
+  setTheme(theme) {
+    this.currentTheme = theme;
+    
+    if (theme === 'light') {
+      if (this.edgeMaterial) {
+        this.edgeMaterial.color.setHex(0x0284C7); // Darker blue for light background
+        this.edgeMaterial.opacity = 0.25; // More opaque
+        this.edgeMaterial.blending = THREE.NormalBlending; // Avoid washing out on white background
+        this.edgeMaterial.needsUpdate = true;
+      }
+      if (this.nodeMaterial) {
+        this.nodeMaterial.blending = THREE.NormalBlending;
+        this.nodeMaterial.needsUpdate = true;
+      }
+      if (this.pulseMaterial) {
+        this.pulseMaterial.color.setHex(0x0369A1); // Deep blue pulses
+        this.pulseMaterial.blending = THREE.NormalBlending;
+        this.pulseMaterial.needsUpdate = true;
+      }
+      if (this.activeNodesGroup) {
+        this.activeNodesGroup.material.blending = THREE.NormalBlending;
+        this.activeNodesGroup.material.needsUpdate = true;
+      }
+    } else {
+      // Dark mode defaults
+      if (this.edgeMaterial) {
+        this.edgeMaterial.color.setHex(0x38BDF8);
+        this.edgeMaterial.opacity = 0.12;
+        this.edgeMaterial.blending = THREE.AdditiveBlending;
+        this.edgeMaterial.needsUpdate = true;
+      }
+      if (this.nodeMaterial) {
+        this.nodeMaterial.blending = THREE.AdditiveBlending;
+        this.nodeMaterial.needsUpdate = true;
+      }
+      if (this.pulseMaterial) {
+        this.pulseMaterial.color.setHex(0x00E5FF);
+        this.pulseMaterial.blending = THREE.AdditiveBlending;
+        this.pulseMaterial.needsUpdate = true;
+      }
+      if (this.activeNodesGroup) {
+        this.activeNodesGroup.material.blending = THREE.AdditiveBlending;
+        this.activeNodesGroup.material.needsUpdate = true;
       }
     }
   }

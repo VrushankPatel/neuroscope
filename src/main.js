@@ -70,6 +70,7 @@ class NeuroScopeApp {
     this.eventBus.on('THEME_CHANGED', ({ theme }) => {
       this.registry.setTheme(theme);
       this.bodyContextManager.setTheme(theme);
+      this.networkGraph.setTheme(theme);
     });
 
     this.selectionManager = new AnatomySelectionManager(
@@ -359,6 +360,7 @@ class NeuroScopeApp {
           console.log("Authentic 3D Human Brain loaded successfully!");
           const initialTheme = document.documentElement.getAttribute('data-theme') || 'light';
           this.registry.setTheme(initialTheme);
+          this.networkGraph.setTheme(initialTheme);
           this.registry.setCortexOpacity(0.22);
           this.hideLoadingScreen();
           this.cardiacFlow.hide();
