@@ -19,11 +19,11 @@ export class HeartModelBuilder {
     try {
       // 1. Translucent Biological Outer Pericardium Shell Material (Identical styling to Brain Cortical Shell)
       // Crystal clear smoked-glass revealing internal chambers, cardiac valves, and hemodynamics
-      const createCorticalShellMaterial = (baseTint = "#BE185D") => {
+      const createCorticalShellMaterial = (baseTint = "#0F172A") => {
         return new THREE.MeshStandardMaterial({
           color: new THREE.Color(baseTint),
-          roughness: 0.22,
-          metalness: 0.12,
+          roughness: 0.20,
+          metalness: 0.15,
           transparent: true,
           opacity: 0.20, // Translucent depth matching brain cortex
           depthWrite: false,
@@ -34,12 +34,14 @@ export class HeartModelBuilder {
       // 2. High-Fidelity Translucent Biological Chamber & Vessel Materials (Matching Brain Internal Organ Aesthetics)
       const createOrganMaterial = (colorHex, emissiveHex = "#000000", emissiveInt = 0.0, opacity = 0.70) => {
         return new THREE.MeshStandardMaterial({
-          color: new THREE.Color("#BE185D"), // Subtle ruby tint instead of dark muddy gray
-          roughness: 0.22,
-          metalness: 0.12,
+          color: new THREE.Color(colorHex),
+          emissive: new THREE.Color(emissiveHex),
+          emissiveIntensity: emissiveInt,
+          roughness: 0.32,
+          metalness: 0.10,
           transparent: true,
-          opacity: 0.20,
-          depthWrite: false,
+          opacity: opacity, // Translucent biological shading revealing interior and blood flow
+          depthWrite: false, // Clean layered transparency without occluding behind chambers
           side: THREE.DoubleSide
         });
       };
@@ -140,7 +142,7 @@ export class HeartModelBuilder {
     }
     shellGeo.computeVertexNormals();
 
-    const shellMat = createCorticalShellMaterial("#BE185D");
+    const shellMat = createCorticalShellMaterial("#0F172A");
     const shellMesh = new THREE.Mesh(shellGeo, shellMat);
     shellMesh.name = "pericardium";
     shellMesh.userData = {
@@ -148,14 +150,14 @@ export class HeartModelBuilder {
       originalName: "Pericardium & Epicardial Shell",
       category: "pericardium",
       isShell: true,
-      color: "#BE185D"
+      color: "#0F172A"
     };
     this.registry.registerStructure("pericardium", shellMesh);
     pivot.add(shellMesh);
 
     // =========================================================================
     // 2. Left Ventricle (Thick muscular conical core forming apical vortex)
-    // Refined crimson/coral tone matching biological arterial myocardium
+    // Deep dark wine-crimson biological myocardium
     // =========================================================================
     const lvGeo = new THREE.CylinderGeometry(0.58, 0.15, 1.45, 36, 24, false);
     const lvPos = lvGeo.attributes.position;
@@ -180,7 +182,7 @@ export class HeartModelBuilder {
     }
     lvGeo.computeVertexNormals();
 
-    const lvMat = createOrganMaterial("#E11D48", "#BE185D", 0.08, 0.72);
+    const lvMat = createOrganMaterial("#881337", "#4C0519", 0.06, 0.72);
     const lvMesh = new THREE.Mesh(lvGeo, lvMat);
     lvMesh.name = "left_ventricle";
     lvMesh.position.set(-0.32, -0.32, 0.16);
@@ -190,15 +192,14 @@ export class HeartModelBuilder {
       structureId: "left_ventricle",
       originalName: "Left Ventricle",
       category: "ventricle",
-      color: "#E11D48"
+      color: "#881337"
     };
     this.registry.registerStructure("left_ventricle", lvMesh);
     pivot.add(lvMesh);
 
     // =========================================================================
     // 3. Right Ventricle (Anterior crescent chamber wrapping around the septum)
-    // Features the infundibulum (conus arteriosus) leading to pulmonary valve
-    // Refined pulmonary azure tone
+    // Deep dark ocean navy blue (distinct from LV, green septum, and atria)
     // =========================================================================
     const rvGeo = new THREE.CylinderGeometry(0.62, 0.28, 1.15, 36, 24, false);
     const rvPos = rvGeo.attributes.position;
@@ -224,7 +225,7 @@ export class HeartModelBuilder {
     }
     rvGeo.computeVertexNormals();
 
-    const rvMat = createOrganMaterial("#0284C7", "#0369A1", 0.08, 0.70);
+    const rvMat = createOrganMaterial("#082F49", "#0369A1", 0.06, 0.70);
     const rvMesh = new THREE.Mesh(rvGeo, rvMat);
     rvMesh.name = "right_ventricle";
     rvMesh.position.set(0.38, -0.18, 0.36);
@@ -234,15 +235,14 @@ export class HeartModelBuilder {
       structureId: "right_ventricle",
       originalName: "Right Ventricle & Infundibulum",
       category: "ventricle",
-      color: "#0284C7"
+      color: "#082F49"
     };
     this.registry.registerStructure("right_ventricle", rvMesh);
     pivot.add(rvMesh);
 
     // =========================================================================
     // 4. Interventricular Septum (Curved Muscular Partition)
-    // Curvature: Convex towards RV, Concave towards LV (authentic hemodynamics)
-    // Refined indigo/violet tone
+    // Deep dark forest green (distinct from ventricles and vessels)
     // =========================================================================
     const septumGeo = new THREE.CylinderGeometry(0.48, 0.32, 1.20, 20, 16, false, 0, Math.PI * 0.85);
     const septumPos = septumGeo.attributes.position;
@@ -257,7 +257,7 @@ export class HeartModelBuilder {
     }
     septumGeo.computeVertexNormals();
 
-    const septumMat = createOrganMaterial("#6366F1", "#4F46E5", 0.06, 0.72);
+    const septumMat = createOrganMaterial("#132A22", "#059669", 0.06, 0.72);
     const septumMesh = new THREE.Mesh(septumGeo, septumMat);
     septumMesh.name = "septum";
     septumMesh.position.set(0.04, -0.28, 0.18);
@@ -266,7 +266,7 @@ export class HeartModelBuilder {
       structureId: "septum",
       originalName: "Interventricular Septum",
       category: "septum",
-      color: "#6366F1"
+      color: "#132A22"
     };
     this.registry.registerStructure("septum", septumMesh);
     pivot.add(septumMesh);
@@ -307,21 +307,21 @@ export class HeartModelBuilder {
     const pv4 = new THREE.TubeGeometry(new THREE.LineCurve3(new THREE.Vector3(-0.02, 0.58, -0.52), new THREE.Vector3(0.32, 0.58, -0.68)), 8, 0.08, 10, false);
 
     const mergedLaGeo = BufferGeometryUtils.mergeGeometries([laBodyGeo, laAuricleGeo, pv1, pv2, pv3, pv4]);
-    const laMat = createOrganMaterial("#BE185D", "#E11D48", 0.06, 0.68);
+    const laMat = createOrganMaterial("#2E1065", "#7C3AED", 0.06, 0.68);
     const laMesh = new THREE.Mesh(mergedLaGeo, laMat);
     laMesh.name = "left_atrium";
     laMesh.userData = {
       structureId: "left_atrium",
       originalName: "Left Atrium & Auricle",
       category: "atrium",
-      color: "#BE185D"
+      color: "#2E1065"
     };
     this.registry.registerStructure("left_atrium", laMesh);
     pivot.add(laMesh);
 
     // =========================================================================
     // 6. Right Atrium (Right border chamber + Triangular Right Auricle appendage)
-    // Refined deep azure tone
+    // Deep dark teal/marine blue tone
     // =========================================================================
     const raBodyGeo = new THREE.SphereGeometry(0.62, 32, 24);
     const raBodyPos = raBodyGeo.attributes.position;
@@ -349,14 +349,14 @@ export class HeartModelBuilder {
     const raAuricleGeo = new THREE.TubeGeometry(raAuricleCurve, 16, 0.12, 12, false);
 
     const mergedRaGeo = BufferGeometryUtils.mergeGeometries([raBodyGeo, raAuricleGeo]);
-    const raMat = createOrganMaterial("#0369A1", "#0284C7", 0.08, 0.68);
+    const raMat = createOrganMaterial("#0C4A6E", "#0284C7", 0.06, 0.68);
     const raMesh = new THREE.Mesh(mergedRaGeo, raMat);
     raMesh.name = "right_atrium";
     raMesh.userData = {
       structureId: "right_atrium",
       originalName: "Right Atrium & Auricle",
       category: "atrium",
-      color: "#0369A1"
+      color: "#0C4A6E"
     };
     this.registry.registerStructure("right_atrium", raMesh);
     pivot.add(raMesh);
@@ -364,7 +364,7 @@ export class HeartModelBuilder {
     // =========================================================================
     // 7. Ascending Aorta, Aortic Arch & 3 Supra-Aortic Branches
     // Medically accurate CatmullRom path with Brachiocephalic, Carotid, Subclavian
-    // Refined radiant amber/orange tone
+    // Deep dark amber/bronze tone
     // =========================================================================
     const aortaSpline = new THREE.CatmullRomCurve3([
       new THREE.Vector3(0.00, 0.35, 0.10),   // Aortic root behind pulmonary trunk
@@ -394,14 +394,14 @@ export class HeartModelBuilder {
     );
 
     const mergedAortaGeo = BufferGeometryUtils.mergeGeometries([aortaGeo, bGeo, cGeo, sGeo]);
-    const aortaMat = createOrganMaterial("#D97706", "#F59E0B", 0.14, 0.80);
+    const aortaMat = createOrganMaterial("#78350F", "#D97706", 0.08, 0.78);
     const aortaMesh = new THREE.Mesh(mergedAortaGeo, aortaMat);
     aortaMesh.name = "aorta";
     aortaMesh.userData = {
       structureId: "aorta",
       originalName: "Aorta & Aortic Arch",
       category: "vessel",
-      color: "#D97706"
+      color: "#78350F"
     };
     this.registry.registerStructure("aorta", aortaMesh);
     pivot.add(aortaMesh);
@@ -410,7 +410,7 @@ export class HeartModelBuilder {
     // 8. Pulmonary Artery Trunk & Left/Right Branches
     // Originates anteriorly from conus arteriosus, crosses in front of ascending aorta,
     // and bifurcates beneath the aortic arch
-    // Refined pulmonary cyan tone
+    // Deep dark midnight cyan tone
     // =========================================================================
     const paTrunkSpline = new THREE.CatmullRomCurve3([
       new THREE.Vector3(0.24, 0.38, 0.36),   // Conus arteriosus of RV
@@ -436,14 +436,14 @@ export class HeartModelBuilder {
     const rightPaGeo = new THREE.TubeGeometry(rightPaCurve, 16, 0.14, 14, false);
 
     const mergedPaGeo = BufferGeometryUtils.mergeGeometries([paTrunkGeo, leftPaGeo, rightPaGeo]);
-    const paMat = createOrganMaterial("#0EA5E9", "#38BDF8", 0.10, 0.80);
+    const paMat = createOrganMaterial("#164E63", "#0891B2", 0.06, 0.78);
     const paMesh = new THREE.Mesh(mergedPaGeo, paMat);
     paMesh.name = "pulmonary_artery";
     paMesh.userData = {
       structureId: "pulmonary_artery",
       originalName: "Pulmonary Artery Trunk & Branches",
       category: "vessel",
-      color: "#0EA5E9"
+      color: "#164E63"
     };
     this.registry.registerStructure("pulmonary_artery", paMesh);
     pivot.add(paMesh);
@@ -451,7 +451,7 @@ export class HeartModelBuilder {
     // =========================================================================
     // 9. Superior Vena Cava & Inferior Vena Cava
     // Vertical systemic venous trunks entering posterior right atrium
-    // Refined venous royal blue tone
+    // Deep dark indigo tone
     // =========================================================================
     const svcSpline = new THREE.CatmullRomCurve3([
       new THREE.Vector3(0.82, 0.85, 0.02),
@@ -468,14 +468,14 @@ export class HeartModelBuilder {
     const ivcGeo = new THREE.TubeGeometry(ivcSpline, 16, 0.18, 16, false);
 
     const mergedSvcGeo = BufferGeometryUtils.mergeGeometries([svcGeo, ivcGeo]);
-    const svcMat = createOrganMaterial("#2563EB", "#3B82F6", 0.08, 0.78);
+    const svcMat = createOrganMaterial("#1E1B4B", "#2563EB", 0.05, 0.76);
     const svcMesh = new THREE.Mesh(mergedSvcGeo, svcMat);
     svcMesh.name = "superior_vena_cava";
     svcMesh.userData = {
       structureId: "superior_vena_cava",
       originalName: "Superior & Inferior Vena Cava",
       category: "vessel",
-      color: "#2563EB"
+      color: "#1E1B4B"
     };
     this.registry.registerStructure("superior_vena_cava", svcMesh);
     pivot.add(svcMesh);
@@ -484,7 +484,7 @@ export class HeartModelBuilder {
     // 10. Cardiac Valves (Mitral, Tricuspid, Aortic, Pulmonary Annuli & Cusps)
     // Pearlescent ivory white-matter bridge tone matching brain corpus callosum
     // =========================================================================
-    const valveMat = createOrganMaterial("#F8FAFC", "#CBD5E1", 0.18, 0.85);
+    const valveMat = createOrganMaterial("#E2E8F0", "#CBD5E1", 0.12, 0.85);
 
     // Mitral Valve annulus (between LA and LV)
     const mitralGeo = new THREE.TorusGeometry(0.30, 0.04, 14, 28);
@@ -521,16 +521,16 @@ export class HeartModelBuilder {
       structureId: "valves",
       originalName: "Cardiac Valves (Mitral, Tricuspid, Aortic, Pulmonary)",
       category: "valve",
-      color: "#F8FAFC"
+      color: "#E2E8F0"
     };
     this.registry.registerStructure("valves", valvesMesh);
     pivot.add(valvesMesh);
 
     // =========================================================================
     // 11. Coronary Arteries (LAD, LCx, RCA with Real Anatomical Branching)
-    // Warm radiant amber/gold vasculature tracing the true cardiac sulci
+    // Dark gold / amber vasculature tracing the true cardiac sulci
     // =========================================================================
-    const coronaryMat = createOrganMaterial("#F59E0B", "#D97706", 0.25, 0.90);
+    const coronaryMat = createOrganMaterial("#92400E", "#D97706", 0.15, 0.85);
 
     // Left Anterior Descending (LAD) along anterior interventricular sulcus
     const ladSpline = new THREE.CatmullRomCurve3([
@@ -584,7 +584,7 @@ export class HeartModelBuilder {
       structureId: "coronary_arteries",
       originalName: "Coronary Arteries (LAD, LCx, RCA)",
       category: "vessel",
-      color: "#F59E0B"
+      color: "#92400E"
     };
     this.registry.registerStructure("coronary_arteries", coronaryMesh);
     pivot.add(coronaryMesh);

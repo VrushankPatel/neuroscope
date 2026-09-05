@@ -190,6 +190,7 @@ export class AnatomicalAssetRegistry {
     // and preserve the original deep tones for light mode.
     const colors = {
       light: {
+        // Authentic Brain Structures (Preserved & Restored)
         brainstem: "#1E293B",
         cerebellum: "#132A22",
         corpus_callosum: "#F1F5F9",
@@ -200,20 +201,26 @@ export class AnatomicalAssetRegistry {
         wernicke_area: "#2E1065",
         temporal_association_cortex: "#2E1065",
         primary_visual_cortex: "#1E1B4B",
-        pericardium: "#BE185D",
-        left_ventricle: "#BE185D",
-        right_ventricle: "#BE185D",
-        septum: "#BE185D",
-        left_atrium: "#BE185D",
-        right_atrium: "#BE185D",
-        aorta: "#BE185D",
-        pulmonary_artery: "#BE185D",
-        superior_vena_cava: "#BE185D",
-        valves: "#BE185D",
-        coronary_arteries: "#BE185D",
-        default: "#BE185D"
+        prefrontal_cortex: "#0F172A",
+        broca_area: "#0F172A",
+
+        // Authentic Heart Structures (Dark Side biological palette: green, dark blue, deep wine, dark plum)
+        pericardium: "#0F172A",
+        left_ventricle: "#881337",      // Deep dark wine crimson
+        right_ventricle: "#082F49",     // Deep dark ocean navy blue
+        septum: "#132A22",              // Deep dark forest green
+        left_atrium: "#2E1065",         // Deep dark plum purple
+        right_atrium: "#0C4A6E",        // Deep dark marine teal blue
+        aorta: "#78350F",               // Deep dark amber bronze
+        pulmonary_artery: "#164E63",    // Deep dark midnight cyan
+        superior_vena_cava: "#1E1B4B",  // Deep dark indigo
+        valves: "#E2E8F0",              // Pearlescent translucent ivory
+        coronary_arteries: "#92400E",   // Dark gold
+
+        default: "#0F172A"
       },
       dark: {
+        // Authentic Brain Structures (Preserved & Restored)
         brainstem: "#475569",
         cerebellum: "#059669",
         corpus_callosum: "#F8FAFC",
@@ -224,18 +231,23 @@ export class AnatomicalAssetRegistry {
         wernicke_area: "#7C3AED",
         temporal_association_cortex: "#7C3AED",
         primary_visual_cortex: "#4F46E5",
-        pericardium: "#F43F5E",
-        left_ventricle: "#F43F5E",
-        right_ventricle: "#F43F5E",
-        septum: "#F43F5E",
-        left_atrium: "#F43F5E",
-        right_atrium: "#F43F5E",
-        aorta: "#F43F5E",
-        pulmonary_artery: "#F43F5E",
-        superior_vena_cava: "#F43F5E",
-        valves: "#F43F5E",
-        coronary_arteries: "#F43F5E",
-        default: "#F43F5E"
+        prefrontal_cortex: "#475569",
+        broca_area: "#475569",
+
+        // Authentic Heart Structures (Dark Mode glowing counterparts)
+        pericardium: "#475569",
+        left_ventricle: "#E11D48",
+        right_ventricle: "#0284C7",
+        septum: "#059669",
+        left_atrium: "#7C3AED",
+        right_atrium: "#0EA5E9",
+        aorta: "#D97706",
+        pulmonary_artery: "#06B6D4",
+        superior_vena_cava: "#3B82F6",
+        valves: "#F8FAFC",
+        coronary_arteries: "#F59E0B",
+
+        default: "#475569"
       }
     };
 
