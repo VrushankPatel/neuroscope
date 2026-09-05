@@ -45,9 +45,83 @@ export class HeartModelBuilder {
         });
       };
 
-      this.buildAuthenticHeartModel(createCorticalShellMaterial, createOrganMaterial, () => {
-        if (onComplete) onComplete(this.rootGroup);
-      });
+      this.gltfLoader.load(
+        '/anatomical_heart.glb',
+        (gltf) => {
+          const rawModel = gltf.scene;
+
+          const box = new THREE.Box3().setFromObject(rawModel);
+          const center = box.getCenter(new THREE.Vector3());
+          const size = box.getSize(new THREE.Vector3());
+          const maxDim = Math.max(size.x, size.y, size.z);
+          const scaleFactor = 3.6 / maxDim;
+
+          rawModel.position.sub(center);
+
+          const heartPivot = new THREE.Group();
+          heartPivot.name = "AnatomicalHeartPivot";
+          heartPivot.add(rawModel);
+          heartPivot.scale.set(scaleFactor, scaleFactor, scaleFactor);
+          
+          heartPivot.rotation.y = -Math.PI / 7;
+          heartPivot.rotation.x = 0.08;
+          heartPivot.position.set(0, 0, 0);
+
+          heartPivot.updateMatrixWorld(true);
+
+          rawModel.traverse((child) => {
+            if (child.isMesh) {
+              const partName = (child.name || "").toLowerCase();
+              const structId = this.mapPartNameToStructureId(partName);
+              const category = this.getCategoryForStructure(structId);
+              
+              const colorsMap = {
+                pericardium: { color: "#667686", opacity: 0.20 },
+                left_ventricle: { color: "#A7B4C2", opacity: 0.45 },
+                right_ventricle: { color: "#8FA0B2", opacity: 0.45 },
+                septum: { color: "#B8C3CE", opacity: 0.50 },
+                left_atrium: { color: "#A1AFBC", opacity: 0.42 },
+                right_atrium: { color: "#91A2B3", opacity: 0.42 },
+                aorta: { color: "#B4BEC8", opacity: 0.52 },
+                pulmonary_artery: { color: "#9EADB9", opacity: 0.52 },
+                superior_vena_cava: { color: "#899AA9", opacity: 0.52 },
+                valves: { color: "#D4DBE2", opacity: 0.65 },
+                coronary_arteries: { color: "#C1CAD3", opacity: 0.65 }
+              };
+
+              const style = colorsMap[structId] || { color: "#A7B4C2", opacity: 0.45 };
+
+              child.userData = {
+                structureId: structId,
+                originalName: child.name || "Anatomical Structure",
+                category: category,
+                color: style.color
+              };
+              
+              if (structId === "pericardium") {
+                child.material = createCorticalShellMaterial(style.color);
+                child.userData.isShell = true;
+              } else {
+                child.material = createOrganMaterial(style.color, "#000000", 0.0, style.opacity);
+              }
+
+              this.registry.registerStructure(structId, child);
+            }
+          });
+
+          this.rootGroup.add(heartPivot);
+          this.onModelLoadedCallbacks.forEach(cb => cb(heartPivot, heartPivot));
+
+          if (onComplete) onComplete(this.rootGroup);
+        },
+        undefined,
+        (error) => {
+          console.warn("External anatomical_heart.glb loading fallback:", error);
+          this.buildAuthenticHeartModel(createCorticalShellMaterial, createOrganMaterial, () => {
+            if (onComplete) onComplete(this.rootGroup);
+          });
+        }
+      );
     } catch (err) {
       console.error("Error constructing heart model:", err);
       if (onError) onError(err);
