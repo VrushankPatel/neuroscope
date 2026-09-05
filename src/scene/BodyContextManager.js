@@ -41,24 +41,15 @@ export class BodyContextManager {
       side: THREE.DoubleSide
     });
 
-    // 2. Subtle Medical Wireframe Silhouette
-    this.wireframeMaterial = new THREE.MeshBasicMaterial({
-      color: new THREE.Color("#38BDF8"),
-      wireframe: true,
-      transparent: true,
-      opacity: 0.0,
-      depthWrite: false
-    });
-
-    // 3. Nervous System Signal Conduits (Brain Mode)
+    // 2. Nervous System Signal Conduits (Brain Mode — Peripheral Nerves)
     this.nervousMaterial = new THREE.MeshBasicMaterial({
-      color: new THREE.Color("#00E5FF"),
+      color: new THREE.Color("#0284C7"),
       transparent: true,
       opacity: 0.0,
       depthWrite: false
     });
 
-    // 4. Cardiovascular Vessel Network — 3 Tiers (Heart Mode)
+    // 3. Cardiovascular Vessel Network — 3 Tiers (Heart Mode)
     // Tier 1: Major arteries & veins (Aorta, Vena Cava, Carotids, Femorals)
     this.vesselTier1Mat = new THREE.MeshBasicMaterial({
       color: new THREE.Color("#64748B"),
@@ -102,10 +93,6 @@ export class BodyContextManager {
       this.bodyMesh = new THREE.Mesh(geometry, this.ghostMaterial);
       this.bodyMesh.name = "HumanBodyGhostMesh";
       this.bodyWrapper.add(this.bodyMesh);
-
-      this.wireframeMesh = new THREE.Mesh(geometry, this.wireframeMaterial);
-      this.wireframeMesh.name = "HumanBodyWireframeMesh";
-      this.bodyWrapper.add(this.wireframeMesh);
     }).catch(err => {
       console.warn("Binary body buffer load failed. Generating procedural anatomical body silhouette.", err);
       this.buildProceduralBodySilhouette();
@@ -635,9 +622,8 @@ export class BodyContextManager {
 
     this.bodyGroup.visible = true;
 
-    // Apply opacities across ghost shell, wireframe, and conduits
+    // Apply opacities across ghost shell and conduits
     if (this.ghostMaterial) this.ghostMaterial.opacity = this.currentOpacity;
-    if (this.wireframeMaterial) this.wireframeMaterial.opacity = this.currentOpacity * 0.28;
     if (this.nervousMaterial) this.nervousMaterial.opacity = this.currentOpacity * 0.85;
 
     // Tiered vascular vessel opacities:
@@ -665,6 +651,9 @@ export class BodyContextManager {
   setTheme(theme) {
     if (this.ghostMaterial) {
       this.ghostMaterial.color.set(theme === 'dark' ? "#94A3B8" : "#475569");
+    }
+    if (this.nervousMaterial) {
+      this.nervousMaterial.color.set(theme === 'dark' ? "#38BDF8" : "#0284C7");
     }
     // Vessel network color — cool slate tone, slightly lighter in dark mode
     const vesselColor = theme === 'dark' ? "#94A3B8" : "#64748B";
