@@ -46,7 +46,7 @@ export class HeartModelBuilder {
       };
 
       this.gltfLoader.load(
-        '/anatomical_heart.glb',
+        '/heart.glb',
         (gltf) => {
           const rawModel = gltf.scene;
 
@@ -69,8 +69,33 @@ export class HeartModelBuilder {
 
           heartPivot.updateMatrixWorld(true);
 
+          const meshesFound = [];
           rawModel.traverse((child) => {
             if (child.isMesh) {
+              meshesFound.push(child);
+            }
+          });
+
+          if (meshesFound.length === 1) {
+            // Single unified 3D anatomical heart mesh (e.g. heart.glb)
+            const singleMesh = meshesFound[0];
+            const style = { color: "#A7B4C2", opacity: 0.45 };
+            singleMesh.userData = {
+              structureId: "left_ventricle",
+              originalName: "Anatomical Human Heart",
+              category: "ventricle",
+              color: style.color
+            };
+            singleMesh.material = createOrganMaterial(style.color, "#000000", 0.0, style.opacity);
+
+            // Register under primary structure keys so all UI/animations locate the mesh
+            const primaryKeys = ["left_ventricle", "right_ventricle", "septum", "left_atrium", "right_atrium", "pericardium", "aorta", "pulmonary_artery", "superior_vena_cava", "valves", "coronary_arteries"];
+            primaryKeys.forEach(key => {
+              this.registry.registerStructure(key, singleMesh);
+            });
+          } else {
+            // Multi-part anatomical heart model
+            meshesFound.forEach((child) => {
               const partName = (child.name || "").toLowerCase();
               const structId = this.mapPartNameToStructureId(partName);
               const category = this.getCategoryForStructure(structId);
@@ -106,8 +131,8 @@ export class HeartModelBuilder {
               }
 
               this.registry.registerStructure(structId, child);
-            }
-          });
+            });
+          }
 
           this.rootGroup.add(heartPivot);
           this.onModelLoadedCallbacks.forEach(cb => cb(heartPivot, heartPivot));
@@ -116,7 +141,7 @@ export class HeartModelBuilder {
         },
         undefined,
         (error) => {
-          console.warn("External anatomical_heart.glb loading fallback:", error);
+          console.warn("External heart.glb loading fallback:", error);
           this.buildAuthenticHeartModel(createCorticalShellMaterial, createOrganMaterial, () => {
             if (onComplete) onComplete(this.rootGroup);
           });
