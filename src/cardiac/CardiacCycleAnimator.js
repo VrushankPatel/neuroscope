@@ -36,8 +36,18 @@ export class CardiacCycleAnimator {
 
     this.btnTriggerSystole = document.getElementById('btn-trigger-systole');
     this.btnTogglePlay = document.getElementById('btn-toggle-cardiac-play');
+    this.scrubber = document.getElementById('cardiac-scrubber');
+    this.scrubberVal = document.getElementById('cardiac-scrubber-val');
 
     this.initUI();
+  }
+
+  getPhaseShortName(phase) {
+    if (phase < 0.18) return "Atrial";
+    if (phase < 0.24) return "Isovolumetric";
+    if (phase < 0.50) return "Systole";
+    if (phase < 0.62) return "Relaxation";
+    return "Diastole";
   }
 
   initUI() {
@@ -57,9 +67,38 @@ export class CardiacCycleAnimator {
       });
     });
 
+    // Controlled Manual Scrubber Slider
+    if (this.scrubber) {
+      const handleScrubber = () => {
+        const val = parseFloat(this.scrubber.value);
+        this.isPlaying = false;
+        this.forcedSystoleActive = false;
+        if (this.btnTogglePlay) {
+          this.btnTogglePlay.textContent = 'Resume Rhythm';
+        }
+        this.phase = Math.max(0, Math.min(1.0, val / 100));
+        this.currentTime = this.phase * this.cycleDuration;
+
+        this.applyCardiacMechanics(this.phase);
+        this.drawEcgWaveform(this.phase);
+        this.updateTelemetry(this.phase);
+
+        if (this.scrubberVal) {
+          this.scrubberVal.textContent = `${Math.round(val)}% (${this.getPhaseShortName(this.phase)})`;
+        }
+      };
+
+      this.scrubber.addEventListener('input', handleScrubber);
+      this.scrubber.addEventListener('change', handleScrubber);
+    }
+
     // Trigger Systole button
     if (this.btnTriggerSystole) {
       this.btnTriggerSystole.addEventListener('click', () => {
+        this.isPlaying = true;
+        if (this.btnTogglePlay) {
+          this.btnTogglePlay.textContent = 'Pause Rhythm';
+        }
         this.triggerManualSystole();
       });
     }
@@ -69,6 +108,9 @@ export class CardiacCycleAnimator {
       this.btnTogglePlay.addEventListener('click', () => {
         this.isPlaying = !this.isPlaying;
         this.btnTogglePlay.textContent = this.isPlaying ? 'Pause Rhythm' : 'Resume Rhythm';
+        if (this.isPlaying) {
+          this.currentTime = this.phase * this.cycleDuration;
+        }
       });
     }
 
@@ -79,13 +121,18 @@ export class CardiacCycleAnimator {
         phaseBtns.forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
         const phaseMode = btn.dataset.phase;
-        if (phaseMode === 'systole') {
-          this.applyCardiacMechanics(0.35); // Peak systole
-          this.updateTelemetry(0.35);
-        } else {
-          this.applyCardiacMechanics(0.85); // Full diastole
-          this.updateTelemetry(0.85);
+        const targetPhase = phaseMode === 'systole' ? 0.35 : 0.85;
+        this.isPlaying = false;
+        if (this.btnTogglePlay) {
+          this.btnTogglePlay.textContent = 'Resume Rhythm';
         }
+        this.phase = targetPhase;
+        this.currentTime = this.phase * this.cycleDuration;
+        if (this.scrubber) this.scrubber.value = Math.round(targetPhase * 100);
+        if (this.scrubberVal) this.scrubberVal.textContent = `${Math.round(targetPhase * 100)}% (${this.getPhaseShortName(targetPhase)})`;
+        this.applyCardiacMechanics(targetPhase);
+        this.drawEcgWaveform(targetPhase);
+        this.updateTelemetry(targetPhase);
       });
     });
   }
@@ -112,10 +159,18 @@ export class CardiacCycleAnimator {
     // 1. Deform and pump 3D ventricular and atrial chambers
     this.applyCardiacMechanics(this.phase);
 
-    // 2. Draw live ECG / Pressure waveform
+    // 2. Draw live ECG / Pressure waveform and update telemetry
     if (this.panel && !this.panel.classList.contains('hidden')) {
       this.drawEcgWaveform(this.phase);
       this.updateTelemetry(this.phase);
+
+      if (this.scrubber && document.activeElement !== this.scrubber) {
+        const pct = Math.round(this.phase * 100);
+        this.scrubber.value = pct;
+        if (this.scrubberVal) {
+          this.scrubberVal.textContent = `Auto (${pct}%)`;
+        }
+      }
     }
   }
 

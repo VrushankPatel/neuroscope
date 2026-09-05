@@ -14,7 +14,7 @@ export const HEART_ANATOMY = {
     ],
     clinicalRelevance: "Left ventricular hypertrophy (LVH), myocardial infarction, and congestive heart failure.",
     references: ["Guyton & Hall, Medical Physiology, Ch. 9"],
-    color: "#EF4444" // Deep Red
+    color: "#E11D48" // Crimson Rose
   },
   "right_ventricle": {
     id: "right_ventricle",
@@ -31,7 +31,7 @@ export const HEART_ANATOMY = {
     ],
     clinicalRelevance: "Right-sided heart failure (Cor Pulmonale) often secondary to pulmonary hypertension.",
     references: ["Guyton & Hall, Medical Physiology, Ch. 9"],
-    color: "#EF4444"
+    color: "#0284C7" // Azure Blue
   },
   "left_atrium": {
     id: "left_atrium",
@@ -48,7 +48,7 @@ export const HEART_ANATOMY = {
     ],
     clinicalRelevance: "Atrial fibrillation can lead to blood stasis and subsequent stroke.",
     references: ["Netter's Clinical Anatomy"],
-    color: "#F87171"
+    color: "#BE185D" // Ruby Pink
   },
   "right_atrium": {
     id: "right_atrium",
@@ -65,7 +65,7 @@ export const HEART_ANATOMY = {
     ],
     clinicalRelevance: "Site of the Sinoatrial (SA) node. Enlargement can occur with pulmonary hypertension.",
     references: ["Netter's Clinical Anatomy"],
-    color: "#F87171"
+    color: "#0369A1" // Deep Azure
   },
   "aorta": {
     id: "aorta",
@@ -82,7 +82,7 @@ export const HEART_ANATOMY = {
     ],
     clinicalRelevance: "Aortic aneurysm, aortic dissection, or coarctation of the aorta.",
     references: ["Guyton & Hall, Medical Physiology"],
-    color: "#DC2626"
+    color: "#D97706"
   },
   "pulmonary_artery": {
     id: "pulmonary_artery",
@@ -99,7 +99,7 @@ export const HEART_ANATOMY = {
     ],
     clinicalRelevance: "Pulmonary embolism or pulmonary arterial hypertension.",
     references: ["Guyton & Hall, Medical Physiology"],
-    color: "#3B82F6" // Blue for deoxygenated
+    color: "#0EA5E9"
   },
   "superior_vena_cava": {
     id: "superior_vena_cava",
@@ -133,7 +133,7 @@ export const HEART_ANATOMY = {
     ],
     clinicalRelevance: "Valvular stenosis (narrowing) or regurgitation (leaking) requiring repair or replacement.",
     references: ["Guyton & Hall, Medical Physiology"],
-    color: "#F1F5F9"
+    color: "#F8FAFC"
   },
   "pericardium": {
     id: "pericardium",
@@ -150,7 +150,7 @@ export const HEART_ANATOMY = {
     ],
     clinicalRelevance: "Acute pericarditis, cardiac tamponade, and pericardial effusion.",
     references: ["Netter's Atlas of Human Anatomy"],
-    color: "#0F172A"
+    color: "#64748B"
   },
   "septum": {
     id: "septum",
@@ -168,7 +168,7 @@ export const HEART_ANATOMY = {
     ],
     clinicalRelevance: "Ventricular Septal Defect (VSD) and asymmetric septal hypertrophy in HOCM.",
     references: ["Guyton & Hall, Medical Physiology"],
-    color: "#312E81"
+    color: "#6366F1"
   },
   "coronary_arteries": {
     id: "coronary_arteries",
@@ -185,6 +185,6 @@ export const HEART_ANATOMY = {
     ],
     clinicalRelevance: "Coronary artery disease (atherosclerosis), angina pectoris, and acute ST-elevation myocardial infarction (STEMI).",
     references: ["Braunwald's Heart Disease"],
-    color: "#B45309"
+    color: "#F59E0B"
   }
 };
