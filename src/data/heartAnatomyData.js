@@ -133,6 +133,58 @@ export const HEART_ANATOMY = {
     ],
     clinicalRelevance: "Valvular stenosis (narrowing) or regurgitation (leaking) requiring repair or replacement.",
     references: ["Guyton & Hall, Medical Physiology"],
-    color: "#F8FAFC"
+    color: "#F1F5F9"
+  },
+  "pericardium": {
+    id: "pericardium",
+    name: "Pericardium & Epicardial Shell",
+    latinName: "Pericardium",
+    category: "pericardium",
+    system: "cardiovascular",
+    hemisphere: "central",
+    location: "Fibroserous sac enclosing the heart and the roots of the great vessels.",
+    function: "Protects the heart from infection, lubricates cardiac motion, and restricts acute distension.",
+    connections: [
+      "Diaphragm (Pericardiacophrenic ligament)",
+      "Sternum (Sternopericardial ligaments)"
+    ],
+    clinicalRelevance: "Acute pericarditis, cardiac tamponade, and pericardial effusion.",
+    references: ["Netter's Atlas of Human Anatomy"],
+    color: "#0F172A"
+  },
+  "septum": {
+    id: "septum",
+    name: "Interventricular Septum",
+    latinName: "Septum interventriculare cordis",
+    category: "septum",
+    system: "cardiovascular",
+    hemisphere: "central",
+    location: "Muscular and membranous dividing wall separating the left and right ventricles.",
+    function: "Provides structural partition and carries the Bundle of His and bundle branches for ventricular depolarization.",
+    connections: [
+      "AV Node",
+      "Purkinje Fibers",
+      "Left & Right Ventricular Walls"
+    ],
+    clinicalRelevance: "Ventricular Septal Defect (VSD) and asymmetric septal hypertrophy in HOCM.",
+    references: ["Guyton & Hall, Medical Physiology"],
+    color: "#312E81"
+  },
+  "coronary_arteries": {
+    id: "coronary_arteries",
+    name: "Coronary Arterial Vasculature",
+    latinName: "Arteriae coronariae",
+    category: "vessel",
+    system: "cardiovascular",
+    hemisphere: "central",
+    location: "Arise from the aortic sinuses at the base of the aorta, traversing the atrioventricular and interventricular sulci.",
+    function: "Supplies oxygen-rich blood, glucose, and nutrients to the contracting myocardium.",
+    connections: [
+      "Aortic Root (Sinuses of Valsalva)",
+      "Myocardial Capillary Bed"
+    ],
+    clinicalRelevance: "Coronary artery disease (atherosclerosis), angina pectoris, and acute ST-elevation myocardial infarction (STEMI).",
+    references: ["Braunwald's Heart Disease"],
+    color: "#B45309"
   }
 };

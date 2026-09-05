@@ -10,6 +10,7 @@ import { AnatomySelectionManager } from './anatomy/AnatomySelectionManager.js';
 import { ExplodedViewManager } from './anatomy/ExplodedViewManager.js';
 
 import { NeuralNetworkGraph } from './network/NeuralNetworkGraph.js';
+import { CardiacFlowSystem } from './cardiac/CardiacFlowSystem.js';
 
 import { EventBus } from './simulation/EventBus.js';
 import { SimulationEngine } from './simulation/SimulationEngine.js';
@@ -53,8 +54,9 @@ class NeuroScopeApp {
     // 2. Anatomy Engine Core
     this.registry = new AnatomicalAssetRegistry();
     
-    // 3. Whole-Brain Distributed Neural Network & Lightning Engine
+    // 3. Whole-Brain Distributed Neural Network & Cardiac Flow Engine
     this.networkGraph = new NeuralNetworkGraph(this.sceneManager.scene);
+    this.cardiacFlow = new CardiacFlowSystem(this.sceneManager.scene);
     
     this.organGroup = null;
 
@@ -125,6 +127,7 @@ class NeuroScopeApp {
       this.cameraController.update(delta);
       this.particleEnv.update(time);
       this.networkGraph.update(delta, time);
+      this.cardiacFlow.update(delta, time);
       this.simEngine.tick(delta);
     });
 
@@ -160,26 +163,43 @@ class NeuroScopeApp {
 
     // Mode Switching
     this.eventBus.on('MODE_CHANGED', ({ mode }) => {
+      const isHeart = GlobalData.currentOrgan === 'heart';
+
       if (mode === 'network') {
         if (this.organGroup) this.organGroup.visible = false;
-        this.networkGraph.show();
+        if (isHeart) {
+          this.networkGraph.hide();
+          this.cardiacFlow.show();
+        } else {
+          this.networkGraph.show();
+          this.cardiacFlow.hide();
+        }
         this.cellularScene.hide();
         document.getElementById('cellular-panel')?.classList.add('hidden');
       } else if (mode === 'cellular') {
         if (this.organGroup) this.organGroup.visible = false;
         this.networkGraph.hide();
+        this.cardiacFlow.hide();
         this.pathwayRenderer.clear();
         this.signalSystem.clear();
         this.cellularScene.show();
         document.getElementById('cellular-panel')?.classList.remove('hidden');
       } else {
         if (this.organGroup) this.organGroup.visible = true;
+        if (isHeart) {
+          this.networkGraph.hide();
+          this.cardiacFlow.show();
+        } else {
+          this.cardiacFlow.hide();
+        }
         this.cellularScene.hide();
         document.getElementById('cellular-panel')?.classList.add('hidden');
       }
 
       if (mode === 'pathways') {
-        this.pathwayRenderer.renderPathway('corticospinal_tract');
+        if (!isHeart) {
+          this.pathwayRenderer.renderPathway('corticospinal_tract');
+        }
       }
     });
 
@@ -217,6 +237,7 @@ class NeuroScopeApp {
       this.sceneManager.scene.remove(this.organGroup);
       this.registry.clear();
       this.networkGraph.hide();
+      this.cardiacFlow.hide();
       this.pathwayRenderer.clear();
       this.signalSystem.clear();
       this.cameraController.reset();
@@ -246,8 +267,17 @@ class NeuroScopeApp {
           console.log("Authentic 3D Human Brain loaded successfully!");
           const initialTheme = document.documentElement.getAttribute('data-theme') || 'light';
           this.registry.setTheme(initialTheme);
+          this.registry.setCortexOpacity(0.22);
           this.hideLoadingScreen();
+          this.cardiacFlow.hide();
           this.networkGraph.show();
+
+          const enterBtn = document.getElementById('btn-enter-brain');
+          if (enterBtn) enterBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="m10 8 4 4-4 4"/></svg> Enter Brain';
+          const slider = document.getElementById('opacity-slider');
+          const valText = document.getElementById('opacity-val');
+          if (slider) slider.value = 22;
+          if (valText) valText.textContent = '22%';
         },
         (err) => {
           console.error("Brain model load error:", err);
@@ -263,8 +293,17 @@ class NeuroScopeApp {
           console.log("Authentic 3D Human Heart loaded successfully!");
           const initialTheme = document.documentElement.getAttribute('data-theme') || 'light';
           this.registry.setTheme(initialTheme);
+          this.registry.setCortexOpacity(0.22);
           this.hideLoadingScreen();
           this.networkGraph.hide();
+          this.cardiacFlow.show();
+
+          const enterBtn = document.getElementById('btn-enter-brain');
+          if (enterBtn) enterBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="m10 8 4 4-4 4"/></svg> Enter Heart';
+          const slider = document.getElementById('opacity-slider');
+          const valText = document.getElementById('opacity-val');
+          if (slider) slider.value = 22;
+          if (valText) valText.textContent = '22%';
         },
         (err) => {
           console.error("Heart model load error:", err);

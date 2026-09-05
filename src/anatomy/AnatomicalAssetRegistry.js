@@ -25,9 +25,15 @@ export class AnatomicalAssetRegistry {
     return Array.from(this.structureMap.values());
   }
 
+  isShellMesh(mesh) {
+    if (!mesh || !mesh.userData) return false;
+    const cat = mesh.userData.category;
+    return cat === 'cortical_region' || cat === 'shell' || cat === 'pericardium' || !!mesh.userData.isShell;
+  }
+
   setCortexOpacity(opacityValue) {
     for (const [id, mesh] of this.structureMap.entries()) {
-      if (mesh.userData.category === 'cortical_region') {
+      if (this.isShellMesh(mesh)) {
         const newOp = Math.max(0.04, opacityValue);
         mesh.material.transparent = newOp < 0.99;
         mesh.material.opacity = newOp;
@@ -53,7 +59,7 @@ export class AnatomicalAssetRegistry {
         prevMesh.material.emissive.setHex(0x000000);
         prevMesh.material.emissiveIntensity = 0.0;
         const orig = this.originalMaterials.get(this.hoveredStructureId);
-        if (orig && prevMesh.userData.category === 'cortical_region') {
+        if (orig && this.isShellMesh(prevMesh)) {
           prevMesh.material.opacity = orig.opacity;
         }
       }
@@ -71,7 +77,7 @@ export class AnatomicalAssetRegistry {
     
     // Adjust opacity for visual feedback: +/- 25% based on current state
     const orig = this.originalMaterials.get(structureId);
-    if (orig && mesh.userData.category === 'cortical_region') {
+    if (orig && this.isShellMesh(mesh)) {
       const baseOpacity = orig.opacity;
       if (baseOpacity > 0.5) {
         mesh.material.opacity = Math.max(0.05, baseOpacity - 0.25);
@@ -89,7 +95,7 @@ export class AnatomicalAssetRegistry {
         mesh.material.emissive.setHex(0x000000);
         mesh.material.emissiveIntensity = 0.0;
         const orig = this.originalMaterials.get(this.hoveredStructureId);
-        if (orig && mesh.userData.category === 'cortical_region') {
+        if (orig && this.isShellMesh(mesh)) {
           mesh.material.opacity = orig.opacity;
         }
         mesh.material.needsUpdate = true;
@@ -111,7 +117,7 @@ export class AnatomicalAssetRegistry {
     
     // Adjust opacity for visual feedback: +/- 50% based on current state
     const orig = this.originalMaterials.get(structureId);
-    if (orig && mesh.userData.category === 'cortical_region') {
+    if (orig && this.isShellMesh(mesh)) {
       const baseOpacity = orig.opacity;
       if (baseOpacity > 0.5) {
         mesh.material.opacity = Math.max(0.05, baseOpacity - 0.50);
@@ -128,7 +134,7 @@ export class AnatomicalAssetRegistry {
       mesh.material.emissive.setHex(0x000000);
       mesh.material.emissiveIntensity = 0.0;
       const orig = this.originalMaterials.get(id);
-      if (orig && mesh.userData.category === 'cortical_region') {
+      if (orig && this.isShellMesh(mesh)) {
         mesh.material.opacity = orig.opacity;
       }
     }
@@ -176,14 +182,17 @@ export class AnatomicalAssetRegistry {
         wernicke_area: "#2E1065",
         temporal_association_cortex: "#2E1065",
         primary_visual_cortex: "#1E1B4B",
-        left_ventricle: "#DC2626",
-        right_ventricle: "#E11D48",
-        left_atrium: "#B91C1C",
-        right_atrium: "#2563EB",
-        aorta: "#DC2626",
-        pulmonary_artery: "#2563EB",
-        superior_vena_cava: "#1D4ED8",
-        valves: "#F8FAFC",
+        pericardium: "#0F172A",
+        left_ventricle: "#581C87",
+        right_ventricle: "#4A044E",
+        septum: "#312E81",
+        left_atrium: "#2E1065",
+        right_atrium: "#1E293B",
+        aorta: "#78350F",
+        pulmonary_artery: "#082F49",
+        superior_vena_cava: "#0F172A",
+        valves: "#F1F5F9",
+        coronary_arteries: "#B45309",
         default: "#0F172A"
       },
       dark: {
@@ -197,14 +206,17 @@ export class AnatomicalAssetRegistry {
         wernicke_area: "#7C3AED",
         temporal_association_cortex: "#7C3AED",
         primary_visual_cortex: "#4F46E5",
-        left_ventricle: "#EF4444",
-        right_ventricle: "#F43F5E",
-        left_atrium: "#F87171",
-        right_atrium: "#3B82F6",
-        aorta: "#F87171",
+        pericardium: "#475569",
+        left_ventricle: "#9333EA",
+        right_ventricle: "#A855F7",
+        septum: "#6366F1",
+        left_atrium: "#7C3AED",
+        right_atrium: "#0284C7",
+        aorta: "#D97706",
         pulmonary_artery: "#38BDF8",
-        superior_vena_cava: "#60A5FA",
-        valves: "#FFFFFF",
+        superior_vena_cava: "#3B82F6",
+        valves: "#F8FAFC",
+        coronary_arteries: "#F59E0B",
         default: "#475569"
       }
     };
