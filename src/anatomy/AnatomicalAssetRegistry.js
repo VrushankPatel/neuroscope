@@ -9,12 +9,30 @@ export class AnatomicalAssetRegistry {
   }
 
   registerStructure(structureId, mesh) {
+    if (!mesh) return;
     this.structureMap.set(structureId, mesh);
-    this.originalMaterials.set(structureId, {
-      opacity: mesh.material.opacity,
-      transparent: mesh.material.transparent,
-      color: mesh.material.color.clone()
-    });
+
+    let mat = mesh.material;
+    if (!mat && mesh.children && mesh.children.length > 0) {
+      mesh.traverse(child => {
+        if (!mat && child.material) mat = child.material;
+      });
+      if (mat) mesh.material = mat;
+    }
+
+    if (mat) {
+      this.originalMaterials.set(structureId, {
+        opacity: mat.opacity !== undefined ? mat.opacity : 1.0,
+        transparent: !!mat.transparent,
+        color: mat.color ? mat.color.clone() : new THREE.Color(0xffffff)
+      });
+    } else {
+      this.originalMaterials.set(structureId, {
+        opacity: 1.0,
+        transparent: false,
+        color: new THREE.Color(0xffffff)
+      });
+    }
   }
 
   getStructure(structureId) {
@@ -225,14 +243,17 @@ export class AnatomicalAssetRegistry {
 
     for (const [id, mesh] of this.structureMap.entries()) {
       const targetColor = palette[id] || palette.default;
-      mesh.material.color.set(targetColor);
+      mesh.traverse(node => {
+        if (node.material && node.material.color) {
+          node.material.color.set(targetColor);
+          node.material.needsUpdate = true;
+        }
+      });
       
-      // Update original materials cache so hover uses the correct current color
       const orig = this.originalMaterials.get(id);
-      if (orig) {
+      if (orig && mesh.material && mesh.material.color) {
         orig.color = mesh.material.color.clone();
       }
-      mesh.material.needsUpdate = true;
     }
   }
 
