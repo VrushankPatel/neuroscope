@@ -174,7 +174,26 @@ export class CardiacCycleAnimator {
     }
   }
 
+  storeOriginalTransforms() {
+    if (this.originalTransforms) return;
+    this.originalTransforms = new Map();
+
+    const structures = ["left_ventricle", "right_ventricle", "septum", "left_atrium", "right_atrium", "pericardium", "valves", "aorta", "pulmonary_artery", "superior_vena_cava", "coronary_arteries"];
+    structures.forEach(id => {
+      const mesh = this.registry.getStructure(id);
+      if (mesh) {
+        this.originalTransforms.set(id, {
+          position: mesh.position.clone(),
+          rotation: mesh.rotation.clone(),
+          scale: mesh.scale.clone()
+        });
+      }
+    });
+  }
+
   applyCardiacMechanics(phase) {
+    this.storeOriginalTransforms();
+
     const lvMesh = this.registry.getStructure("left_ventricle");
     const rvMesh = this.registry.getStructure("right_ventricle");
     const laMesh = this.registry.getStructure("left_atrium");
@@ -182,80 +201,81 @@ export class CardiacCycleAnimator {
     const septumMesh = this.registry.getStructure("septum");
     const shellMesh = this.registry.getStructure("pericardium");
 
-    // Cardiac cycle timing:
-    // 0.00 - 0.18: Atrial Systole (Atria contract, Ventricles full)
-    // 0.18 - 0.24: Isovolumetric Contraction (Onset of systole)
-    // 0.24 - 0.50: Rapid Ventricular Ejection (Ventricles contract & twist, Atria fill)
-    // 0.50 - 0.60: Isovolumetric Relaxation (Onset of diastole)
-    // 0.60 - 1.00: Ventricular Diastole & Passive Filling
-
-    let lvScaleX = 1.0;
-    let lvScaleY = 1.0;
-    let lvScaleZ = 1.0;
-    let lvRotZ = 0.0;
-
-    let atrialScale = 1.0;
+    // Smooth organic cardiac cycle curves
+    let vSqueeze = 0;   // Ventricular concentric radial contraction factor (0 to 0.12)
+    let aSqueeze = 0;   // Atrial concentric contraction factor
+    let vTorsion = 0;   // Apical wringing rotation factor
 
     if (phase < 0.18) {
-      // Atrial Systole: Atria contract slightly to top off ventricles
+      // Atrial Systole: Atria contract inward to pump blood into ventricles
       const t = phase / 0.18;
-      atrialScale = 1.0 - 0.08 * Math.sin(t * Math.PI);
-      // Ventricles are at maximum stretch (Frank-Starling preload EDV)
-      lvScaleX = 1.03;
-      lvScaleY = 1.02;
-      lvScaleZ = 1.03;
+      aSqueeze = Math.sin(t * Math.PI) * 0.10;
+      vSqueeze = -0.02 * Math.sin(t * Math.PI); // Preload filling expansion
     } else if (phase >= 0.18 && phase < 0.50) {
-      // Ventricular Systole: Powerful concentric contraction + apical wringing twist
+      // Ventricular Systole: Concentric ejection contraction + apical wringing torsion
       const t = (phase - 0.18) / 0.32;
-      const squeeze = Math.sin(t * Math.PI);
-      
-      // Left ventricle shrinks radially by ~14%, shortens longitudinally by ~7%
-      lvScaleX = 1.0 - 0.14 * squeeze;
-      lvScaleY = 1.0 - 0.07 * squeeze;
-      lvScaleZ = 1.0 - 0.14 * squeeze;
-
-      // Natural anatomical apical torsion (~4 degrees)
-      lvRotZ = 0.07 * squeeze;
-
-      // Atria relaxing and receiving venous return
-      atrialScale = 1.0 + 0.04 * squeeze;
+      const pulse = Math.sin(t * Math.PI);
+      vSqueeze = pulse * 0.12;   // 12% inward radial contraction
+      vTorsion = pulse * 0.04;   // ~2.5 degree wringing torsion
+      aSqueeze = -pulse * 0.03;  // Atrial filling expansion
     } else if (phase >= 0.50 && phase < 0.62) {
-      // Isovolumetric Relaxation: Elastic recoil
+      // Isovolumetric Relaxation: Recoil back to baseline
       const t = (phase - 0.50) / 0.12;
-      lvScaleX = 0.96 + 0.04 * t;
-      lvScaleY = 0.97 + 0.03 * t;
-      lvScaleZ = 0.96 + 0.04 * t;
-      lvRotZ = 0.02 * (1.0 - t);
-      atrialScale = 1.02;
+      vSqueeze = 0.12 * (1.0 - t);
+      vTorsion = 0.04 * (1.0 - t);
+      aSqueeze = -0.03 * (1.0 - t);
     } else {
       // Diastole: Relaxed filling state
-      lvScaleX = 1.0;
-      lvScaleY = 1.0;
-      lvScaleZ = 1.0;
-      lvRotZ = 0.0;
-      atrialScale = 1.0;
+      vSqueeze = 0;
+      aSqueeze = 0;
+      vTorsion = 0;
     }
 
-    if (lvMesh) {
-      lvMesh.scale.set(lvScaleX, lvScaleY, lvScaleZ);
-      lvMesh.rotation.z = lvRotZ;
-    }
-    if (rvMesh) {
-      rvMesh.scale.set(lvScaleX * 0.98, lvScaleY, lvScaleZ * 0.98);
-    }
-    if (septumMesh) {
-      septumMesh.scale.set(lvScaleX, lvScaleY, lvScaleZ);
-    }
-    if (laMesh) {
-      laMesh.scale.set(atrialScale, atrialScale, atrialScale);
-    }
-    if (raMesh) {
-      raMesh.scale.set(atrialScale, atrialScale, atrialScale);
-    }
+    // Concentric contraction helper that anchors the base of the chamber
+    // preventing vertical translation up and down
+    const applyVentricularDeformation = (mesh, origKey) => {
+      const orig = this.originalTransforms.get(origKey);
+      if (!mesh || !orig) return;
+
+      const scaleX = orig.scale.x * (1.0 - vSqueeze * 1.0);
+      const scaleZ = orig.scale.z * (1.0 - vSqueeze * 1.0);
+      const scaleY = orig.scale.y * (1.0 - vSqueeze * 0.3);
+
+      mesh.scale.set(scaleX, scaleY, scaleZ);
+      mesh.position.copy(orig.position);
+      mesh.rotation.set(
+        orig.rotation.x,
+        orig.rotation.y + vTorsion,
+        orig.rotation.z
+      );
+    };
+
+    const applyAtrialDeformation = (mesh, origKey) => {
+      const orig = this.originalTransforms.get(origKey);
+      if (!mesh || !orig) return;
+
+      const s = 1.0 - aSqueeze;
+      mesh.scale.set(orig.scale.x * s, orig.scale.y * s, orig.scale.z * s);
+      mesh.position.copy(orig.position);
+      mesh.rotation.copy(orig.rotation);
+    };
+
+    applyVentricularDeformation(lvMesh, "left_ventricle");
+    applyVentricularDeformation(rvMesh, "right_ventricle");
+    applyVentricularDeformation(septumMesh, "septum");
+
+    applyAtrialDeformation(laMesh, "left_atrium");
+    applyAtrialDeformation(raMesh, "right_atrium");
+
     if (shellMesh) {
-      // Subtle pericardial pulsation
-      const shellSqueeze = (lvScaleX - 1.0) * 0.35;
-      shellMesh.scale.set(1.0 + shellSqueeze, 1.0 + shellSqueeze * 0.5, 1.0 + shellSqueeze);
+      const orig = this.originalTransforms.get("pericardium");
+      if (orig) {
+        const sX = orig.scale.x * (1.0 - vSqueeze * 0.3);
+        const sY = orig.scale.y * (1.0 - vSqueeze * 0.15);
+        const sZ = orig.scale.z * (1.0 - vSqueeze * 0.3);
+        shellMesh.scale.set(sX, sY, sZ);
+        shellMesh.position.copy(orig.position);
+      }
     }
   }
 
