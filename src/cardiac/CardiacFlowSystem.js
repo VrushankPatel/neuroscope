@@ -14,62 +14,87 @@ export class CardiacFlowSystem {
   }
 
   initFlowCircuits() {
-    // 1. Pulmonary Deoxygenated Circuit (Vena Cava -> RA -> RV -> Pulmonary Trunk -> L/R PA)
-    const pulmonaryCircuitSpline = new THREE.CatmullRomCurve3([
-      new THREE.Vector3(0.95, 1.85, -0.05),  // Superior Vena Cava input
-      new THREE.Vector3(0.95, 1.15, 0.05),   // Entering Right Atrium
-      new THREE.Vector3(0.75, 0.65, 0.25),   // Right Atrial chamber swirl
-      new THREE.Vector3(0.35, 0.25, 0.25),   // Passing Tricuspid Valve
-      new THREE.Vector3(0.55, -0.20, 0.35),  // Right Ventricular cavity
-      new THREE.Vector3(0.38, -0.45, 0.28),  // RV lower body
-      new THREE.Vector3(0.25, 0.15, 0.38),   // Conus arteriosus / Infundibulum
-      new THREE.Vector3(0.18, 0.65, 0.35),   // Pulmonary Valve
-      new THREE.Vector3(0.05, 1.15, 0.25),   // Pulmonary Trunk
-      new THREE.Vector3(-0.15, 1.35, 0.05),  // Pulmonary Bifurcation
-      new THREE.Vector3(-0.95, 1.25, -0.30)  // Left Pulmonary Artery to lungs
-    ]);
+    this.flowColor = 0xF1F5F9; // Monochromatic luminous flow
 
-    const rightPulmonaryBranchSpline = new THREE.CatmullRomCurve3([
-      new THREE.Vector3(-0.15, 1.35, 0.05),  // Bifurcation
-      new THREE.Vector3(0.35, 1.25, -0.15),
-      new THREE.Vector3(0.85, 1.15, -0.25)   // Right Pulmonary Artery to lungs
-    ]);
+    // Start points from the heart
+    const aortaArch = new THREE.Vector3(0, 1.7, 0); // Arch of aorta
+    const descendingAorta = new THREE.Vector3(0, -1.0, -0.5);
+    const pulmonaryTrunk = new THREE.Vector3(0, 1.2, 0.2); // For future lungs
 
-    // 2. Systemic Oxygenated Circuit (Pulmonary Veins -> LA -> LV -> Aorta -> Arch -> Branches)
-    const systemicCircuitSpline = new THREE.CatmullRomCurve3([
-      new THREE.Vector3(-0.90, 0.95, -0.55), // Pulmonary Vein inlet
-      new THREE.Vector3(-0.45, 0.75, -0.45), // Left Atrial cavity
-      new THREE.Vector3(-0.25, 0.35, -0.15), // Passing Mitral Valve
-      new THREE.Vector3(-0.35, -0.25, 0.05), // Left Ventricular inflow
-      new THREE.Vector3(-0.25, -0.65, 0.10), // Apex vortex (thick muscular myocardium)
-      new THREE.Vector3(-0.10, -0.15, 0.12), // Outflow tract (subaortic)
-      new THREE.Vector3(0.00, 0.55, 0.15),   // Aortic Valve
-      new THREE.Vector3(0.05, 1.25, 0.15),   // Ascending Aorta
-      new THREE.Vector3(-0.15, 1.75, 0.05),  // Arch apex
-      new THREE.Vector3(-0.65, 1.65, -0.35), // Distal aortic arch
-      new THREE.Vector3(-0.75, 0.65, -0.55), // Descending thoracic aorta
-      new THREE.Vector3(-0.75, -0.55, -0.55) // Systemic arterial output
-    ]);
+    // 1. Head & Neck (Carotids)
+    // Distance from aorta (1.7) to top of head (12.25) is about 10.5
+    this.buildVascularBranch(aortaArch, new THREE.Vector3(0, 1, 0), 4.5, 0, 4, 0.06);
 
-    // Systemic Carotid / Brachiocephalic Arch Branch
-    const carotidBranchSpline = new THREE.CatmullRomCurve3([
-      new THREE.Vector3(-0.15, 1.75, 0.05),  // Arch takeoff
-      new THREE.Vector3(-0.12, 2.25, 0.05)   // Cranial blood flow
-    ]);
+    // 2. Left Arm (Subclavian)
+    // Arms extend down to around y=-20
+    this.buildVascularBranch(aortaArch, new THREE.Vector3(-1, 0.2, 0).normalize(), 9.0, 0, 4, 0.05);
 
-    // 3. Coronary Myocardial Perfusion Stream
-    const coronarySpline = new THREE.CatmullRomCurve3([
-      new THREE.Vector3(0.05, 0.75, 0.20),   // Right coronary ostium
-      new THREE.Vector3(0.45, 0.25, 0.35),   // Anterior AV groove
-      new THREE.Vector3(0.15, -0.25, 0.40),  // Left Anterior Descending (LAD) sulcus
-      new THREE.Vector3(-0.18, -0.60, 0.22)  // Apex perfusion
-    ]);
+    // 3. Right Arm
+    this.buildVascularBranch(aortaArch, new THREE.Vector3(1, 0.2, 0).normalize(), 9.0, 0, 4, 0.05);
 
-    this.createStream(pulmonaryCircuitSpline, 65, 0x38BDF8, 0.055, 0.85); // Deoxygenated blue
-    this.createStream(rightPulmonaryBranchSpline, 25, 0x38BDF8, 0.050, 0.80);
-    this.createStream(systemicCircuitSpline, 85, 0xF43F5E, 0.060, 0.95);  // Oxygenated crimson/coral
-    this.createStream(carotidBranchSpline, 25, 0xFB923C, 0.050, 0.90);   // Cranial warm amber
-    this.createStream(coronarySpline, 40, 0xE11D48, 0.045, 0.80);        // Coronary perfusion
+    // 4. Lower Body (Descending Aorta -> Iliac -> Femoral -> Legs)
+    // First segment goes straight down to pelvis (world y=-20.3)
+    const descendingCurve = new THREE.CatmullRomCurve3([
+      aortaArch,
+      descendingAorta,
+      new THREE.Vector3(0, -10.0, -0.2), // Abdominal
+      new THREE.Vector3(0, -18.0, 0) // Bifurcation at pelvis
+    ]);
+    this.createStream(descendingCurve, 100, this.flowColor, 0.08, 0.7);
+
+    // Left Leg (from -18 down to -46.5) -> distance is 28.5
+    this.buildVascularBranch(new THREE.Vector3(0, -18.0, 0), new THREE.Vector3(-0.25, -1, 0).normalize(), 12.0, 0, 4, 0.06);
+
+    // Right Leg
+    this.buildVascularBranch(new THREE.Vector3(0, -18.0, 0), new THREE.Vector3(0.25, -1, 0).normalize(), 12.0, 0, 4, 0.06);
+
+    // 5. Pulmonary branches (Future lungs)
+    this.buildVascularBranch(pulmonaryTrunk, new THREE.Vector3(-1, -0.2, 0.5).normalize(), 3.0, 0, 3, 0.05); // Left lung
+    this.buildVascularBranch(pulmonaryTrunk, new THREE.Vector3(1, -0.2, 0.5).normalize(), 3.0, 0, 3, 0.05); // Right lung
+    
+    // 6. Coronary Perfusion (Heart itself)
+    this.buildVascularBranch(new THREE.Vector3(0, 0.5, 0.2), new THREE.Vector3(0, -1, 0.5).normalize(), 1.5, 0, 3, 0.04);
+  }
+
+  buildVascularBranch(startPos, dir, length, depth, maxDepth, particleSize) {
+    if (depth > maxDepth) return;
+
+    const endPos = startPos.clone().add(dir.clone().multiplyScalar(length));
+    
+    // Add organic curvature
+    const midPos = startPos.clone().lerp(endPos, 0.5);
+    midPos.x += (Math.random() - 0.5) * length * 0.15;
+    midPos.z += (Math.random() - 0.5) * length * 0.15;
+
+    const curve = new THREE.CatmullRomCurve3([startPos, midPos, endPos]);
+    const particleCount = Math.max(8, Math.floor(length * 5));
+    
+    // Speed slows down as vessels get smaller
+    const speed = Math.max(0.2, 0.8 - depth * 0.15);
+    this.createStream(curve, particleCount, this.flowColor, particleSize, speed);
+
+    // Branching logic
+    const nextLength = length * (0.55 + Math.random() * 0.2);
+    const nextSize = particleSize * 0.8;
+    const spread = 0.4 + (depth * 0.1); // Spread increases at smaller branches
+
+    // Always create at least one branch
+    const dir1 = dir.clone().applyAxisAngle(new THREE.Vector3(0, 0, 1), spread).normalize();
+    dir1.applyAxisAngle(new THREE.Vector3(0, 1, 0), (Math.random() - 0.5));
+    this.buildVascularBranch(endPos, dir1, nextLength, depth + 1, maxDepth, nextSize);
+
+    // Second branch
+    if (Math.random() > 0.1 || depth === 0) {
+      const dir2 = dir.clone().applyAxisAngle(new THREE.Vector3(0, 0, 1), -spread).normalize();
+      dir2.applyAxisAngle(new THREE.Vector3(0, 1, 0), (Math.random() - 0.5));
+      this.buildVascularBranch(endPos, dir2, nextLength, depth + 1, maxDepth, nextSize);
+    }
+    
+    // Third branch (capillary beds)
+    if (depth >= maxDepth - 1 && Math.random() > 0.5) {
+      const dir3 = dir.clone().applyAxisAngle(new THREE.Vector3(1, 0, 0), (Math.random() - 0.5)).normalize();
+      this.buildVascularBranch(endPos, dir3, nextLength * 0.8, depth + 1, maxDepth, nextSize * 0.8);
+    }
   }
 
   createStream(curve, count, colorHex, particleSize, baseSpeed) {
@@ -112,12 +137,13 @@ export class CardiacFlowSystem {
     ctx.fillRect(0, 0, 64, 64);
     const texture = new THREE.CanvasTexture(canvas);
 
+    // Enhance luminous appearance
     const material = new THREE.PointsMaterial({
-      size: particleSize,
+      size: particleSize * 2.0, // Make slightly larger and softer
       vertexColors: true,
       map: texture,
       transparent: true,
-      opacity: 0.9,
+      opacity: 0.6, // Soft transparency
       blending: THREE.AdditiveBlending,
       depthWrite: false
     });

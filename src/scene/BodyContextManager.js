@@ -308,15 +308,17 @@ export class BodyContextManager {
 
   setOrgan(organId) {
     this.currentOrgan = organId;
-    const scale = 0.165;
-    this.bodyWrapper.scale.set(scale, scale, scale);
-
+    
     if (organId === 'brain') {
+      const scale = 0.165;
+      this.bodyWrapper.scale.set(scale, scale, scale);
       // Align cranium (y ~ 168.5 in body space) with the brain at (0, 0, 0)
       this.bodyWrapper.position.set(0.0, -168.5 * scale, -2.0 * scale);
       this.nervousGroup.visible = true;
       this.vascularGroup.visible = false;
     } else if (organId === 'heart') {
+      const scale = 0.35; // Larger body scale so the heart fits naturally inside the chest
+      this.bodyWrapper.scale.set(scale, scale, scale);
       // Align thoracic mediastinum (y ~ 133.0 in body space) with the heart at (0, 0, 0)
       this.bodyWrapper.position.set(0.0, -133.0 * scale, 1.2 * scale);
       this.nervousGroup.visible = false;

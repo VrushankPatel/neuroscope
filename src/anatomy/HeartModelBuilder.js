@@ -34,14 +34,12 @@ export class HeartModelBuilder {
       // 2. High-Fidelity Translucent Biological Chamber & Vessel Materials (Matching Brain Internal Organ Aesthetics)
       const createOrganMaterial = (colorHex, emissiveHex = "#000000", emissiveInt = 0.0, opacity = 0.70) => {
         return new THREE.MeshStandardMaterial({
-          color: new THREE.Color(colorHex),
-          emissive: new THREE.Color(emissiveHex),
-          emissiveIntensity: emissiveInt,
-          roughness: 0.38,
-          metalness: 0.10,
+          color: new THREE.Color("#64748B"), // Same monochromatic color as the cortical shell
+          roughness: 0.22,
+          metalness: 0.12,
           transparent: true,
-          opacity: opacity, // Semi-translucent depth prevents heavy dark/opaque appearance
-          depthWrite: true,
+          opacity: 0.20,
+          depthWrite: false,
           side: THREE.DoubleSide
         });
       };

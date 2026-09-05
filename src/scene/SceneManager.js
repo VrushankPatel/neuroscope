@@ -81,10 +81,10 @@ export class SceneManager {
   setTheme(theme) {
     if (theme === 'dark') {
       this.scene.background = new THREE.Color('#05070A');
-      this.scene.fog = new THREE.FogExp2('#05070A', 0.08);
+      this.scene.fog = new THREE.FogExp2('#05070A', 0.035); // Reduced from 0.08 so body remains visible on zoom out
     } else {
       this.scene.background = new THREE.Color('#F8F9FA');
-      this.scene.fog = new THREE.FogExp2('#F8F9FA', 0.06);
+      this.scene.fog = new THREE.FogExp2('#F8F9FA', 0.025); // Reduced from 0.06
     }
   }
 }
