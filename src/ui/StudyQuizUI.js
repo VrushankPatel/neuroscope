@@ -1,4 +1,4 @@
-import { QUIZ_QUESTIONS } from '../data/quizData.js';
+import { GlobalData } from '../data/GlobalData.js';
 
 export class StudyQuizUI {
   constructor(eventBus) {
@@ -29,6 +29,10 @@ export class StudyQuizUI {
     });
   }
 
+  getQuestions() {
+    return GlobalData.getQuizQuestions() || [];
+  }
+
   startQuiz() {
     this.currentQIndex = 0;
     this.score = 0;
@@ -39,13 +43,14 @@ export class StudyQuizUI {
 
   renderQuestion() {
     if (!this.bodyEl) return;
-    const q = QUIZ_QUESTIONS[this.currentQIndex];
+    const questions = this.getQuestions();
+    const q = questions[this.currentQIndex];
     if (!q) {
       this.renderSummary();
       return;
     }
 
-    if (this.qNumEl) this.qNumEl.textContent = `${this.currentQIndex + 1}/${QUIZ_QUESTIONS.length}`;
+    if (this.qNumEl) this.qNumEl.textContent = `${this.currentQIndex + 1}/${questions.length}`;
 
     this.bodyEl.innerHTML = `
       <div style="font-size: 1rem; font-weight: 600; margin-bottom: 14px;">${q.question}</div>
@@ -69,7 +74,8 @@ export class StudyQuizUI {
   }
 
   evaluateAnswer(selectedIndex, optBtns) {
-    const q = QUIZ_QUESTIONS[this.currentQIndex];
+    const questions = this.getQuestions();
+    const q = questions[this.currentQIndex];
     const feedbackEl = this.bodyEl.querySelector('#quiz-feedback');
 
     optBtns.forEach(b => b.disabled = true);

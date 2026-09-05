@@ -11,6 +11,7 @@ import { ExplodedViewManager } from './anatomy/ExplodedViewManager.js';
 
 import { NeuralNetworkGraph } from './network/NeuralNetworkGraph.js';
 import { CardiacFlowSystem } from './cardiac/CardiacFlowSystem.js';
+import { CardiacCycleAnimator } from './cardiac/CardiacCycleAnimator.js';
 import { BodyContextManager } from './scene/BodyContextManager.js';
 
 import { EventBus } from './simulation/EventBus.js';
@@ -55,12 +56,16 @@ class NeuroScopeApp {
     // 2. Anatomy Engine Core
     this.registry = new AnatomicalAssetRegistry();
     
-    // 3. Whole-Brain Distributed Neural Network & Cardiac Flow Engine
+    // 3. Whole-Brain Distributed Neural Network & Cardiac Systems
     this.networkGraph = new NeuralNetworkGraph(this.sceneManager.scene);
     this.cardiacFlow = new CardiacFlowSystem(this.sceneManager.scene);
+    this.cardiacCycle = new CardiacCycleAnimator(this.registry, this.eventBus);
     this.bodyContextManager = new BodyContextManager(this.sceneManager.scene, this.eventBus);
     
     this.organGroup = null;
+    this.currentMode = 'explore';
+    this.isConductionActive = false;
+    this.conductionSignalProgress = 0;
 
     this.eventBus.on('THEME_CHANGED', ({ theme }) => {
       this.registry.setTheme(theme);
@@ -131,25 +136,41 @@ class NeuroScopeApp {
       this.particleEnv.update(time);
       this.networkGraph.update(delta, time);
       this.cardiacFlow.update(delta, time);
+      this.cardiacCycle.update(delta);
       this.bodyContextManager.update(this.sceneManager.camera, delta, time);
       this.simEngine.tick(delta);
+      if (this.isConductionActive && this.currentMode === 'pathways') {
+        this.conductionSignalProgress = (this.conductionSignalProgress + delta * 0.75) % 1.0;
+        this.signalSystem.updateProgress(this.conductionSignalProgress);
+      }
     });
 
     this.initEventListeners();
-    this.loadOrgan('brain');
+    const savedOrgan = localStorage.getItem('neuroscope_selected_organ') || 'brain';
+    this.navUI.setOrgan(savedOrgan);
+    this.loadOrgan(savedOrgan);
     this.sceneManager.startLoop();
   }
 
   initEventListeners() {
     this.eventBus.on('ORGAN_CHANGED', ({ organ }) => {
+      localStorage.setItem('neuroscope_selected_organ', organ);
+      this.navUI.setOrgan(organ);
       this.loadOrgan(organ);
     });
-    // Neural Network Overlay Toggle Button
+
+    // Neural Network / Blood Flow Overlay Toggle Button
     const toggleNetBtn = document.getElementById('btn-toggle-network');
     if (toggleNetBtn) {
       toggleNetBtn.addEventListener('click', () => {
-        const active = this.networkGraph.toggle();
-        toggleNetBtn.classList.toggle('active', active);
+        const isHeart = GlobalData.currentOrgan === 'heart';
+        if (isHeart) {
+          const active = this.cardiacFlow.toggle();
+          toggleNetBtn.classList.toggle('active', active);
+        } else {
+          const active = this.networkGraph.toggle();
+          toggleNetBtn.classList.toggle('active', active);
+        }
       });
     }
 
@@ -167,43 +188,97 @@ class NeuroScopeApp {
 
     // Mode Switching
     this.eventBus.on('MODE_CHANGED', ({ mode }) => {
+      this.currentMode = mode;
       const isHeart = GlobalData.currentOrgan === 'heart';
 
       if (mode === 'network') {
-        if (this.organGroup) this.organGroup.visible = false;
+        // Blood Flow (Heart) or Neural Network (Brain)
         if (isHeart) {
+          if (this.organGroup) this.organGroup.visible = true;
+          this.registry.setCortexOpacity(0.18);
           this.networkGraph.hide();
           this.cardiacFlow.show();
+          this.isConductionActive = false;
+          this.pathwayRenderer.clear();
+          this.signalSystem.clear();
+          this.cardiacCycle.hide();
         } else {
+          if (this.organGroup) this.organGroup.visible = false;
           this.networkGraph.show();
           this.cardiacFlow.hide();
+          this.isConductionActive = false;
+          this.pathwayRenderer.clear();
+          this.signalSystem.clear();
         }
         this.cellularScene.hide();
         document.getElementById('cellular-panel')?.classList.add('hidden');
+        this.cardiacCycle.hide();
+      } else if (mode === 'pathways') {
+        // Conduction (Heart) or Pathways (Brain)
+        if (isHeart) {
+          if (this.organGroup) this.organGroup.visible = true;
+          this.registry.setCortexOpacity(0.16);
+          this.networkGraph.hide();
+          this.cardiacFlow.hide();
+          this.cardiacCycle.hide();
+          this.pathwayRenderer.renderPathway('cardiac_conduction');
+          const curve = this.pathwayGraph.getSplineCurve('cardiac_conduction');
+          if (curve) {
+            this.signalSystem.setPathway(curve, "#F59E0B");
+            this.isConductionActive = true;
+            this.conductionSignalProgress = 0;
+          }
+        } else {
+          if (this.organGroup) this.organGroup.visible = true;
+          this.networkGraph.hide();
+          this.cardiacFlow.hide();
+          this.isConductionActive = false;
+          this.pathwayRenderer.renderPathway('corticospinal_tract');
+        }
+        this.cellularScene.hide();
+        document.getElementById('cellular-panel')?.classList.add('hidden');
+        this.cardiacCycle.hide();
       } else if (mode === 'cellular') {
-        if (this.organGroup) this.organGroup.visible = false;
-        this.networkGraph.hide();
-        this.cardiacFlow.hide();
-        this.pathwayRenderer.clear();
-        this.signalSystem.clear();
-        this.cellularScene.show();
-        document.getElementById('cellular-panel')?.classList.remove('hidden');
+        // Pumping & Ventricles (Heart) or Cellular (Brain)
+        if (isHeart) {
+          if (this.organGroup) this.organGroup.visible = true;
+          this.registry.setCortexOpacity(0.22);
+          this.networkGraph.hide();
+          this.cardiacFlow.hide();
+          this.pathwayRenderer.clear();
+          this.signalSystem.clear();
+          this.isConductionActive = false;
+          this.cellularScene.hide();
+          document.getElementById('cellular-panel')?.classList.add('hidden');
+          this.cardiacCycle.show();
+        } else {
+          if (this.organGroup) this.organGroup.visible = false;
+          this.networkGraph.hide();
+          this.cardiacFlow.hide();
+          this.pathwayRenderer.clear();
+          this.signalSystem.clear();
+          this.isConductionActive = false;
+          this.cardiacCycle.hide();
+          this.cellularScene.show();
+          document.getElementById('cellular-panel')?.classList.remove('hidden');
+        }
       } else {
+        // explore, clinical, quiz
         if (this.organGroup) this.organGroup.visible = true;
         if (isHeart) {
           this.networkGraph.hide();
-          this.cardiacFlow.show();
+          this.cardiacFlow.hide();
+          this.isConductionActive = false;
+          this.pathwayRenderer.clear();
+          this.signalSystem.clear();
+          this.cardiacCycle.hide();
         } else {
           this.cardiacFlow.hide();
+          this.isConductionActive = false;
         }
         this.cellularScene.hide();
         document.getElementById('cellular-panel')?.classList.add('hidden');
-      }
-
-      if (mode === 'pathways') {
-        if (!isHeart) {
-          this.pathwayRenderer.renderPathway('corticospinal_tract');
-        }
+        this.cardiacCycle.hide();
       }
     });
 
@@ -240,8 +315,12 @@ class NeuroScopeApp {
     if (this.organGroup) {
       this.sceneManager.scene.remove(this.organGroup);
       this.registry.clear();
+      this.explodedManager.originalPositions.clear();
+      this.explodedManager.isExploded = false;
       this.networkGraph.hide();
       this.cardiacFlow.hide();
+      this.cardiacCycle.hide();
+      this.isConductionActive = false;
       this.pathwayRenderer.clear();
       this.signalSystem.clear();
       this.cameraController.reset();
@@ -250,6 +329,12 @@ class NeuroScopeApp {
     GlobalData.setOrgan(organId);
     if (this.bodyContextManager) {
       this.bodyContextManager.setOrgan(organId);
+    }
+    if (this.navUI) {
+      this.navUI.setOrgan(organId);
+    }
+    if (this.organSelectorUI) {
+      this.organSelectorUI.setOrgan(organId);
     }
     
     // Update UI that depends on the data
@@ -277,10 +362,25 @@ class NeuroScopeApp {
           this.registry.setCortexOpacity(0.22);
           this.hideLoadingScreen();
           this.cardiacFlow.hide();
-          this.networkGraph.show();
+          this.cardiacCycle.hide();
+
+          if (this.currentMode === 'network') {
+            this.networkGraph.show();
+            if (this.organGroup) this.organGroup.visible = false;
+          } else if (this.currentMode === 'pathways') {
+            this.pathwayRenderer.renderPathway('corticospinal_tract');
+          } else if (this.currentMode === 'cellular') {
+            this.cellularScene.show();
+            document.getElementById('cellular-panel')?.classList.remove('hidden');
+          } else {
+            this.networkGraph.show();
+          }
 
           const enterBtn = document.getElementById('btn-enter-brain');
-          if (enterBtn) enterBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="m10 8 4 4-4 4"/></svg> Enter Brain';
+          if (enterBtn) {
+            enterBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="m10 8 4 4-4 4"/></svg> Enter Brain';
+            enterBtn.title = "Fly camera inside the brain";
+          }
           const slider = document.getElementById('opacity-slider');
           const valText = document.getElementById('opacity-val');
           if (slider) slider.value = 22;
@@ -303,10 +403,34 @@ class NeuroScopeApp {
           this.registry.setCortexOpacity(0.22);
           this.hideLoadingScreen();
           this.networkGraph.hide();
-          this.cardiacFlow.show();
+
+          if (this.currentMode === 'network') {
+            this.cardiacFlow.show();
+            this.cardiacCycle.hide();
+          } else if (this.currentMode === 'pathways') {
+            this.cardiacFlow.hide();
+            this.cardiacCycle.hide();
+            this.pathwayRenderer.renderPathway('cardiac_conduction');
+            const curve = this.pathwayGraph.getSplineCurve('cardiac_conduction');
+            if (curve) {
+              this.signalSystem.setPathway(curve, "#F59E0B");
+              this.isConductionActive = true;
+              this.conductionSignalProgress = 0;
+            }
+          } else if (this.currentMode === 'cellular') {
+            this.cardiacFlow.hide();
+            this.cardiacCycle.show();
+          } else {
+            // explore mode
+            this.cardiacFlow.show();
+            this.cardiacCycle.hide();
+          }
 
           const enterBtn = document.getElementById('btn-enter-brain');
-          if (enterBtn) enterBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="m10 8 4 4-4 4"/></svg> Enter Heart';
+          if (enterBtn) {
+            enterBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="m10 8 4 4-4 4"/></svg> Enter Heart';
+            enterBtn.title = "Fly camera inside the heart";
+          }
           const slider = document.getElementById('opacity-slider');
           const valText = document.getElementById('opacity-val');
           if (slider) slider.value = 22;

@@ -3,8 +3,13 @@ import { PATHWAY_DATABASE as BRAIN_PATHWAYS } from './pathwayData.js';
 import { SCENARIOS_DATABASE as BRAIN_SCENARIOS } from './scenariosData.js';
 
 import { HEART_ANATOMY } from './heartAnatomyData.js';
-// We'll create empty pathways and scenarios for the heart for now
-export const HEART_PATHWAYS = {};
+import { HEART_PATHWAYS } from './heartPathwayData.js';
+import { CLINICAL_CASES as BRAIN_CLINICAL } from './clinicalCases.js';
+import { HEART_CLINICAL_CASES } from './heartClinicalCases.js';
+import { QUIZ_QUESTIONS as BRAIN_QUIZ } from './quizData.js';
+import { HEART_QUIZ_QUESTIONS } from './heartQuizData.js';
+
+export { HEART_PATHWAYS };
 export const HEART_SCENARIOS = [
   {
     id: "cardiac_cycle",
@@ -52,7 +57,7 @@ export const HEART_SCENARIOS = [
 
 export class DataManager {
   constructor() {
-    this.currentOrgan = 'brain';
+    this.currentOrgan = localStorage.getItem('neuroscope_selected_organ') || 'brain';
   }
 
   setOrgan(organId) {
@@ -69,6 +74,14 @@ export class DataManager {
 
   getScenarios() {
     return this.currentOrgan === 'brain' ? BRAIN_SCENARIOS : HEART_SCENARIOS;
+  }
+
+  getClinicalCases() {
+    return this.currentOrgan === 'brain' ? BRAIN_CLINICAL : HEART_CLINICAL_CASES;
+  }
+
+  getQuizQuestions() {
+    return this.currentOrgan === 'brain' ? BRAIN_QUIZ : HEART_QUIZ_QUESTIONS;
   }
 }
 

@@ -122,7 +122,7 @@
 /* Floating Left Controls Dock */
 .explored-controls {
   position: absolute;
-  top: 270px;
+  top: 156px;
   left: 20px;
   width: 190px;
   padding: 12px;
@@ -757,14 +757,15 @@ input[type="range"] {
 /* Organ Selector */
 .organ-selector {
   position: absolute;
-  top: 80px;
-  left: 2rem;
+  top: 74px;
+  left: 20px;
   display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-  padding: 0.75rem;
-  z-index: 100;
+  flex-direction: row;
+  gap: 8px;
+  padding: 6px;
+  z-index: 25;
   pointer-events: auto;
+  border-radius: var(--radius-md);
 }
 
 .organ-tile {
@@ -772,36 +773,132 @@ input[type="range"] {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  width: 72px;
-  height: 72px;
-  border-radius: 12px;
-  background: var(--glass-bg);
-  border: 1px solid var(--border-color);
+  width: 86px;
+  height: 62px;
+  border-radius: 10px;
+  background: var(--surface-glass);
+  border: 1px solid var(--surface-glass-border);
   color: var(--text-secondary);
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: all 0.25s ease;
 }
 
 .organ-tile:hover {
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--surface-glass-hover);
   color: var(--text-primary);
-  border-color: var(--primary);
+  border-color: var(--accent-primary);
 }
 
 .organ-tile.active {
-  background: var(--primary-glow);
-  color: var(--primary);
-  border-color: var(--primary);
-  box-shadow: 0 0 15px var(--primary-glow);
+  background: rgba(56, 189, 248, 0.18);
+  color: var(--accent-primary);
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 12px rgba(56, 189, 248, 0.25);
 }
 
 .organ-icon {
-  margin-bottom: 0.25rem;
+  margin-bottom: 2px;
 }
 
 .organ-name {
   font-size: 0.65rem;
-  font-weight: 600;
+  font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
+}
+
+/* Cardiac Dynamics Telemetry */
+.cardiac-stats-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.stat-item {
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-surface-translucent);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  padding: 6px 8px;
+}
+
+.stat-label {
+  font-size: 0.62rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.stat-val {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--accent-primary);
+  margin-top: 2px;
+}
+
+.valves-status-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.valve-status-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 8px;
+  background: var(--bg-surface-translucent);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+}
+
+.valve-name {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.valve-state {
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 3px;
+}
+
+.valve-state.state-open {
+  background: rgba(16, 185, 129, 0.15);
+  color: #10B981;
+  border: 1px solid rgba(16, 185, 129, 0.4);
+}
+
+.valve-state.state-closed {
+  background: rgba(239, 68, 68, 0.15);
+  color: #EF4444;
+  border: 1px solid rgba(239, 68, 68, 0.4);
+}
+
+.phase-selector-bar {
+  display: flex;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.phase-btn {
+  flex: 1;
+}
+
+.phase-btn.active {
+  background: var(--accent-primary);
+  color: #FFFFFF;
+}
+
+#cardiac-ecg-canvas {
+  width: 100%;
+  height: 110px;
+  background: #000;
+  border-radius: 4px;
 }

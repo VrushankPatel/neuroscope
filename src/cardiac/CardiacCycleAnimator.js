@@ -1,0 +1,412 @@
+import * as THREE from 'three';
+
+/**
+ * CardiacCycleAnimator
+ * Coordinates authentic ventricular contraction mechanics in 3D,
+ * live multi-lead ECG waveform rendering, and hemodynamic valve synchronization.
+ */
+export class CardiacCycleAnimator {
+  constructor(registry, eventBus) {
+    this.registry = registry;
+    this.eventBus = eventBus;
+
+    this.isPlaying = true;
+    this.bpm = 72;
+    this.cycleDuration = 60 / this.bpm; // ~0.833 seconds
+    this.currentTime = 0;
+    this.phase = 0; // 0.0 to 1.0
+
+    this.forcedSystoleActive = false;
+    this.forcedSystoleTimer = 0;
+
+    // DOM Elements
+    this.panel = document.getElementById('cardiac-panel');
+    this.ecgCanvas = document.getElementById('cardiac-ecg-canvas');
+    this.ecgCtx = this.ecgCanvas ? this.ecgCanvas.getContext('2d') : null;
+
+    this.phaseLabel = document.getElementById('cardiac-cycle-phase');
+    this.lvPressureLabel = document.getElementById('cardiac-lv-pressure');
+    this.rvPressureLabel = document.getElementById('cardiac-rv-pressure');
+    this.strokeVolLabel = document.getElementById('cardiac-stroke-vol');
+    this.hrLabel = document.getElementById('cardiac-hr-val');
+    this.heartSoundBadge = document.getElementById('heart-sound-badge');
+    this.avValvesState = document.getElementById('av-valves-state');
+    this.slValvesState = document.getElementById('sl-valves-state');
+    this.valveExplanation = document.getElementById('valve-explanation');
+
+    this.btnTriggerSystole = document.getElementById('btn-trigger-systole');
+    this.btnTogglePlay = document.getElementById('btn-toggle-cardiac-play');
+
+    this.initUI();
+  }
+
+  initUI() {
+    // Tabs in cardiac panel
+    const tabs = document.querySelectorAll('#cardiac-panel .tab-btn');
+    tabs.forEach(tab => {
+      tab.addEventListener('click', () => {
+        tabs.forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+
+        const targetTab = tab.dataset.cardiacTab;
+        const contents = document.querySelectorAll('#cardiac-panel .cell-tab-content');
+        contents.forEach(c => c.classList.add('hidden'));
+
+        const targetContent = document.getElementById(`cardiac-tab-${targetTab}`);
+        if (targetContent) targetContent.classList.remove('hidden');
+      });
+    });
+
+    // Trigger Systole button
+    if (this.btnTriggerSystole) {
+      this.btnTriggerSystole.addEventListener('click', () => {
+        this.triggerManualSystole();
+      });
+    }
+
+    // Play/Pause button
+    if (this.btnTogglePlay) {
+      this.btnTogglePlay.addEventListener('click', () => {
+        this.isPlaying = !this.isPlaying;
+        this.btnTogglePlay.textContent = this.isPlaying ? 'Pause Rhythm' : 'Resume Rhythm';
+      });
+    }
+
+    // Phase selector buttons (Diastole vs Systole)
+    const phaseBtns = document.querySelectorAll('#cardiac-panel .phase-btn');
+    phaseBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        phaseBtns.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        const phaseMode = btn.dataset.phase;
+        if (phaseMode === 'systole') {
+          this.applyCardiacMechanics(0.35); // Peak systole
+          this.updateTelemetry(0.35);
+        } else {
+          this.applyCardiacMechanics(0.85); // Full diastole
+          this.updateTelemetry(0.85);
+        }
+      });
+    });
+  }
+
+  triggerManualSystole() {
+    this.forcedSystoleActive = true;
+    this.forcedSystoleTimer = 0;
+    this.currentTime = this.cycleDuration * 0.20; // Jump right to isovolumetric contraction
+  }
+
+  update(delta) {
+    if (!this.isPlaying && !this.forcedSystoleActive) return;
+
+    if (this.forcedSystoleActive) {
+      this.forcedSystoleTimer += delta;
+      if (this.forcedSystoleTimer > 0.45) {
+        this.forcedSystoleActive = false;
+      }
+    }
+
+    this.currentTime = (this.currentTime + delta) % this.cycleDuration;
+    this.phase = this.currentTime / this.cycleDuration; // 0.0 to 1.0
+
+    // 1. Deform and pump 3D ventricular and atrial chambers
+    this.applyCardiacMechanics(this.phase);
+
+    // 2. Draw live ECG / Pressure waveform
+    if (this.panel && !this.panel.classList.contains('hidden')) {
+      this.drawEcgWaveform(this.phase);
+      this.updateTelemetry(this.phase);
+    }
+  }
+
+  applyCardiacMechanics(phase) {
+    const lvMesh = this.registry.getStructure("left_ventricle");
+    const rvMesh = this.registry.getStructure("right_ventricle");
+    const laMesh = this.registry.getStructure("left_atrium");
+    const raMesh = this.registry.getStructure("right_atrium");
+    const septumMesh = this.registry.getStructure("septum");
+    const shellMesh = this.registry.getStructure("pericardium");
+
+    // Cardiac cycle timing:
+    // 0.00 - 0.18: Atrial Systole (Atria contract, Ventricles full)
+    // 0.18 - 0.24: Isovolumetric Contraction (Onset of systole)
+    // 0.24 - 0.50: Rapid Ventricular Ejection (Ventricles contract & twist, Atria fill)
+    // 0.50 - 0.60: Isovolumetric Relaxation (Onset of diastole)
+    // 0.60 - 1.00: Ventricular Diastole & Passive Filling
+
+    let lvScaleX = 1.0;
+    let lvScaleY = 1.0;
+    let lvScaleZ = 1.0;
+    let lvRotZ = 0.0;
+
+    let atrialScale = 1.0;
+
+    if (phase < 0.18) {
+      // Atrial Systole: Atria contract slightly to top off ventricles
+      const t = phase / 0.18;
+      atrialScale = 1.0 - 0.08 * Math.sin(t * Math.PI);
+      // Ventricles are at maximum stretch (Frank-Starling preload EDV)
+      lvScaleX = 1.03;
+      lvScaleY = 1.02;
+      lvScaleZ = 1.03;
+    } else if (phase >= 0.18 && phase < 0.50) {
+      // Ventricular Systole: Powerful concentric contraction + apical wringing twist
+      const t = (phase - 0.18) / 0.32;
+      const squeeze = Math.sin(t * Math.PI);
+      
+      // Left ventricle shrinks radially by ~14%, shortens longitudinally by ~7%
+      lvScaleX = 1.0 - 0.14 * squeeze;
+      lvScaleY = 1.0 - 0.07 * squeeze;
+      lvScaleZ = 1.0 - 0.14 * squeeze;
+
+      // Natural anatomical apical torsion (~4 degrees)
+      lvRotZ = 0.07 * squeeze;
+
+      // Atria relaxing and receiving venous return
+      atrialScale = 1.0 + 0.04 * squeeze;
+    } else if (phase >= 0.50 && phase < 0.62) {
+      // Isovolumetric Relaxation: Elastic recoil
+      const t = (phase - 0.50) / 0.12;
+      lvScaleX = 0.96 + 0.04 * t;
+      lvScaleY = 0.97 + 0.03 * t;
+      lvScaleZ = 0.96 + 0.04 * t;
+      lvRotZ = 0.02 * (1.0 - t);
+      atrialScale = 1.02;
+    } else {
+      // Diastole: Relaxed filling state
+      lvScaleX = 1.0;
+      lvScaleY = 1.0;
+      lvScaleZ = 1.0;
+      lvRotZ = 0.0;
+      atrialScale = 1.0;
+    }
+
+    if (lvMesh) {
+      lvMesh.scale.set(lvScaleX, lvScaleY, lvScaleZ);
+      lvMesh.rotation.z = lvRotZ;
+    }
+    if (rvMesh) {
+      rvMesh.scale.set(lvScaleX * 0.98, lvScaleY, lvScaleZ * 0.98);
+    }
+    if (septumMesh) {
+      septumMesh.scale.set(lvScaleX, lvScaleY, lvScaleZ);
+    }
+    if (laMesh) {
+      laMesh.scale.set(atrialScale, atrialScale, atrialScale);
+    }
+    if (raMesh) {
+      raMesh.scale.set(atrialScale, atrialScale, atrialScale);
+    }
+    if (shellMesh) {
+      // Subtle pericardial pulsation
+      const shellSqueeze = (lvScaleX - 1.0) * 0.35;
+      shellMesh.scale.set(1.0 + shellSqueeze, 1.0 + shellSqueeze * 0.5, 1.0 + shellSqueeze);
+    }
+  }
+
+  updateTelemetry(phase) {
+    if (!this.phaseLabel) return;
+
+    if (phase < 0.18) {
+      this.phaseLabel.textContent = "Atrial Systole (P-Wave)";
+      this.phaseLabel.style.background = "rgba(56, 189, 248, 0.2)";
+      this.phaseLabel.style.color = "#38BDF8";
+
+      if (this.lvPressureLabel) this.lvPressureLabel.textContent = "12 / 8 mmHg";
+      if (this.rvPressureLabel) this.rvPressureLabel.textContent = "6 / 3 mmHg";
+      if (this.strokeVolLabel) this.strokeVolLabel.textContent = "120 mL (EDV max)";
+      if (this.heartSoundBadge) this.heartSoundBadge.textContent = "Atrial Kick";
+      if (this.avValvesState) {
+        this.avValvesState.textContent = "Open (Atrial Ejection)";
+        this.avValvesState.className = "valve-state state-open";
+      }
+      if (this.slValvesState) {
+        this.slValvesState.textContent = "Closed";
+        this.slValvesState.className = "valve-state state-closed";
+      }
+    } else if (phase >= 0.18 && phase < 0.24) {
+      this.phaseLabel.textContent = "Isovolumetric Contraction (QRS)";
+      this.phaseLabel.style.background = "rgba(245, 158, 11, 0.2)";
+      this.phaseLabel.style.color = "#F59E0B";
+
+      if (this.lvPressureLabel) this.lvPressureLabel.textContent = "80 / 12 mmHg (Rising)";
+      if (this.rvPressureLabel) this.rvPressureLabel.textContent = "15 / 4 mmHg";
+      if (this.strokeVolLabel) this.strokeVolLabel.textContent = "120 mL (All valves closed)";
+      if (this.heartSoundBadge) this.heartSoundBadge.textContent = "S1 'Lub' (AV Close)";
+      if (this.avValvesState) {
+        this.avValvesState.textContent = "SNAPPED SHUT (S1)";
+        this.avValvesState.className = "valve-state state-closed";
+      }
+      if (this.slValvesState) {
+        this.slValvesState.textContent = "Closed (Pre-ejection)";
+        this.slValvesState.className = "valve-state state-closed";
+      }
+    } else if (phase >= 0.24 && phase < 0.50) {
+      this.phaseLabel.textContent = "Rapid Ventricular Ejection";
+      this.phaseLabel.style.background = "rgba(239, 68, 68, 0.2)";
+      this.phaseLabel.style.color = "#EF4444";
+
+      if (this.lvPressureLabel) this.lvPressureLabel.textContent = "120 mmHg (Peak Systole)";
+      if (this.rvPressureLabel) this.rvPressureLabel.textContent = "25 mmHg (Peak Systole)";
+      if (this.strokeVolLabel) this.strokeVolLabel.textContent = "70 mL Ejected (EF 58%)";
+      if (this.heartSoundBadge) this.heartSoundBadge.textContent = "Systolic Surge";
+      if (this.avValvesState) {
+        this.avValvesState.textContent = "Closed Tight";
+        this.avValvesState.className = "valve-state state-closed";
+      }
+      if (this.slValvesState) {
+        this.slValvesState.textContent = "FORCED OPEN (Ejection)";
+        this.slValvesState.className = "valve-state state-open";
+      }
+    } else if (phase >= 0.50 && phase < 0.62) {
+      this.phaseLabel.textContent = "Isovolumetric Relaxation (T-Wave)";
+      this.phaseLabel.style.background = "rgba(168, 85, 247, 0.2)";
+      this.phaseLabel.style.color = "#A855F7";
+
+      if (this.lvPressureLabel) this.lvPressureLabel.textContent = "70 mmHg (Plummeting)";
+      if (this.rvPressureLabel) this.rvPressureLabel.textContent = "10 mmHg";
+      if (this.strokeVolLabel) this.strokeVolLabel.textContent = "50 mL (ESV minimum)";
+      if (this.heartSoundBadge) this.heartSoundBadge.textContent = "S2 'Dub' (Semilunar Close)";
+      if (this.avValvesState) {
+        this.avValvesState.textContent = "Closed";
+        this.avValvesState.className = "valve-state state-closed";
+      }
+      if (this.slValvesState) {
+        this.slValvesState.textContent = "SLAMMED SHUT (S2)";
+        this.slValvesState.className = "valve-state state-closed";
+      }
+    } else {
+      this.phaseLabel.textContent = "Ventricular Diastole (Filling)";
+      this.phaseLabel.style.background = "rgba(16, 185, 129, 0.2)";
+      this.phaseLabel.style.color = "#10B981";
+
+      if (this.lvPressureLabel) this.lvPressureLabel.textContent = "8 mmHg (Diastolic trough)";
+      if (this.rvPressureLabel) this.rvPressureLabel.textContent = "4 mmHg";
+      if (this.strokeVolLabel) this.strokeVolLabel.textContent = "Passive Filling (50 -> 110 mL)";
+      if (this.heartSoundBadge) this.heartSoundBadge.textContent = "Diastolic Flow";
+      if (this.avValvesState) {
+        this.avValvesState.textContent = "Open (Rapid Inflow)";
+        this.avValvesState.className = "valve-state state-open";
+      }
+      if (this.slValvesState) {
+        this.slValvesState.textContent = "Closed Tight";
+        this.slValvesState.className = "valve-state state-closed";
+      }
+    }
+  }
+
+  drawEcgWaveform(currentPhase) {
+    if (!this.ecgCtx || !this.ecgCanvas) return;
+    const ctx = this.ecgCtx;
+    const w = this.ecgCanvas.width;
+    const h = this.ecgCanvas.height;
+
+    // Clear background
+    ctx.fillStyle = "#090D16";
+    ctx.fillRect(0, 0, w, h);
+
+    // Draw subtle medical grid lines
+    ctx.strokeStyle = "rgba(0, 229, 255, 0.08)";
+    ctx.lineWidth = 1;
+    for (let x = 0; x < w; x += 20) {
+      ctx.beginPath();
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x, h);
+      ctx.stroke();
+    }
+    for (let y = 0; y < h; y += 20) {
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      ctx.lineTo(w, y);
+      ctx.stroke();
+    }
+
+    // Baseline Y
+    const baseline = h * 0.65;
+
+    // ECG profile mathematical formula (P, Q, R, S, T)
+    const getEcgVoltage = (p) => {
+      // p is 0.0 to 1.0
+      // P wave: centered at 0.10, height 12
+      const pWave = 14 * Math.exp(-Math.pow((p - 0.10) / 0.035, 2));
+      // Q wave: centered at 0.20, height -10
+      const qWave = -10 * Math.exp(-Math.pow((p - 0.20) / 0.012, 2));
+      // R peak: centered at 0.22, height 58
+      const rWave = 58 * Math.exp(-Math.pow((p - 0.22) / 0.014, 2));
+      // S dip: centered at 0.24, height -18
+      const sWave = -18 * Math.exp(-Math.pow((p - 0.24) / 0.015, 2));
+      // T wave: centered at 0.54, height 20
+      const tWave = 22 * Math.exp(-Math.pow((p - 0.54) / 0.055, 2));
+
+      return pWave + qWave + rWave + sWave + tWave;
+    };
+
+    // Draw ECG Lead II trace
+    ctx.beginPath();
+    ctx.strokeStyle = "#00E5FF";
+    ctx.lineWidth = 2;
+    ctx.shadowColor = "#00E5FF";
+    ctx.shadowBlur = 6;
+
+    for (let x = 0; x < w; x++) {
+      const p = x / w;
+      const v = getEcgVoltage(p);
+      const y = baseline - v;
+      if (x === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+
+    // Draw ventricular pressure curve (Aortic & LV pressure)
+    ctx.beginPath();
+    ctx.strokeStyle = "rgba(239, 68, 68, 0.6)";
+    ctx.lineWidth = 1.5;
+    for (let x = 0; x < w; x++) {
+      const p = x / w;
+      let pressure = 10;
+      if (p >= 0.18 && p < 0.58) {
+        const t = (p - 0.18) / 0.40;
+        pressure = 10 + 45 * Math.sin(t * Math.PI);
+      }
+      const y = baseline - pressure;
+      if (x === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+
+    // Traveling Sweep Cursor
+    const cursorX = currentPhase * w;
+    const currentV = getEcgVoltage(currentPhase);
+    const cursorY = baseline - currentV;
+
+    // Vertical sweep line
+    ctx.beginPath();
+    ctx.strokeStyle = "rgba(245, 158, 11, 0.4)";
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([3, 3]);
+    ctx.moveTo(cursorX, 0);
+    ctx.lineTo(cursorX, h);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Glowing cursor indicator bead
+    ctx.beginPath();
+    ctx.arc(cursorX, cursorY, 4, 0, Math.PI * 2);
+    ctx.fillStyle = "#F59E0B";
+    ctx.shadowColor = "#F59E0B";
+    ctx.shadowBlur = 8;
+    ctx.fill();
+    ctx.shadowBlur = 0;
+  }
+
+  show() {
+    if (this.panel) this.panel.classList.remove('hidden');
+  }
+
+  hide() {
+    if (this.panel) this.panel.classList.add('hidden');
+    // Reset meshes to baseline scale
+    this.applyCardiacMechanics(0.85);
+  }
+}

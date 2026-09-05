@@ -1,4 +1,4 @@
-import { CLINICAL_CASES } from '../data/clinicalCases.js';
+import { GlobalData } from '../data/GlobalData.js';
 
 export class ClinicalUI {
   constructor(eventBus) {
@@ -25,9 +25,14 @@ export class ClinicalUI {
     });
   }
 
+  getCases() {
+    return GlobalData.getClinicalCases();
+  }
+
   loadCase(index) {
     this.currentCaseIndex = index;
-    const caseData = CLINICAL_CASES[index];
+    const cases = this.getCases();
+    const caseData = cases ? cases[index] : null;
     if (!caseData) return;
 
     if (this.titleEl) this.titleEl.textContent = caseData.title;
@@ -36,7 +41,8 @@ export class ClinicalUI {
   }
 
   evaluateLesionClick(selectedStructureId) {
-    const caseData = CLINICAL_CASES[this.currentCaseIndex];
+    const cases = this.getCases();
+    const caseData = cases ? cases[this.currentCaseIndex] : null;
     if (!caseData || !this.feedbackEl) return;
 
     this.feedbackEl.classList.remove('hidden');

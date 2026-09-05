@@ -37,27 +37,27 @@
       <nav class="nav-links">
         <button class="nav-btn active" data-mode="explore">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/></svg>
-          Anatomy
+          <span class="nav-text">Anatomy</span>
         </button>
         <button class="nav-btn" data-mode="network">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
-          Neural Network
+          <span class="nav-text">Neural Network</span>
         </button>
         <button class="nav-btn" data-mode="pathways">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
-          Pathways
+          <span class="nav-text">Pathways</span>
         </button>
         <button class="nav-btn" data-mode="cellular">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-          Cellular
+          <span class="nav-text">Cellular</span>
         </button>
         <button class="nav-btn" data-mode="clinical">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
-          Clinical
+          <span class="nav-text">Clinical</span>
         </button>
         <button class="nav-btn" data-mode="quiz">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-          Quiz
+          <span class="nav-text">Quiz</span>
         </button>
       </nav>
 
@@ -67,8 +67,8 @@
           <span class="kbd-shortcut">⌘K</span>
         </button>
         <button class="icon-btn" id="btn-toggle-network" title="Toggle Neural Network Overlay">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M3 12h3m12 0h3M12 3v3m0 12v3"/></svg>
-          <span>Net</span>
+          <svg id="toggle-network-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M3 12h3m12 0h3M12 3v3m0 12v3"/></svg>
+          <span id="toggle-network-label">Net</span>
         </button>
         <button class="icon-btn" id="theme-toggle" title="Toggle Theme (Dark / Light)">
           <svg class="theme-icon-dark" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
@@ -90,6 +90,7 @@
     <div id="organ-selector" class="organ-selector glass-panel"></div>
 
     <!-- Streamlined Left Dock Controls -->
+    <div class="explored-controls glass-panel">
       <div class="control-group">
         <label class="control-label">
           <span>Body Context</span>
@@ -271,6 +272,79 @@
               Primary excitatory neurotransmitter triggering EPSP membrane depolarization.
             </div>
             <button class="btn btn-sm btn-primary" id="btn-trigger-synapse">Release Vesicles</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Cardiac Dynamics & Ventricular Mechanics Panel (Heart View) -->
+    <div id="cardiac-panel" class="cellular-panel glass-panel hidden">
+      <div class="cellular-header">
+        <h2 id="cardiac-panel-title">Ventricular Mechanics & Cardiac Cycle</h2>
+        <div class="cellular-tabs">
+          <button class="tab-btn active" data-cardiac-tab="cycle">Pumping & ECG</button>
+          <button class="tab-btn" data-cardiac-tab="valves">Valves & Ventricles</button>
+        </div>
+      </div>
+
+      <div class="cellular-content">
+        <!-- Tab 1: Pumping Cycle & ECG -->
+        <div id="cardiac-tab-cycle" class="cell-tab-content">
+          <div class="oscilloscope-card">
+            <div class="card-header">
+              <span>ECG & Ventricular Pressure</span>
+              <span class="voltage-badge" id="cardiac-cycle-phase">Late Diastole</span>
+            </div>
+            <canvas id="cardiac-ecg-canvas" width="320" height="110"></canvas>
+            <div class="cardiac-stats-grid">
+              <div class="stat-item">
+                <span class="stat-label">LV Pressure</span>
+                <span class="stat-val" id="cardiac-lv-pressure">120 / 80 mmHg</span>
+              </div>
+              <div class="stat-item">
+                <span class="stat-label">RV Pressure</span>
+                <span class="stat-val" id="cardiac-rv-pressure">25 / 8 mmHg</span>
+              </div>
+              <div class="stat-item">
+                <span class="stat-label">Stroke Vol</span>
+                <span class="stat-val" id="cardiac-stroke-vol">70 mL (EF 58%)</span>
+              </div>
+              <div class="stat-item">
+                <span class="stat-label">Heart Rate</span>
+                <span class="stat-val" id="cardiac-hr-val">72 BPM</span>
+              </div>
+            </div>
+            <div class="oscilloscope-controls" style="margin-top: 10px;">
+              <button class="btn btn-sm btn-primary" id="btn-trigger-systole">Trigger Systole</button>
+              <button class="btn btn-sm btn-secondary" id="btn-toggle-cardiac-play">Pause Rhythm</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab 2: Valves & Ventricles Dynamics -->
+        <div id="cardiac-tab-valves" class="cell-tab-content hidden">
+          <div class="synapse-card">
+            <div class="card-header">
+              <span>Valve Synchronization</span>
+              <span class="voltage-badge" id="heart-sound-badge">S1 "Lub"</span>
+            </div>
+            <div class="valves-status-list">
+              <div class="valve-status-row">
+                <span class="valve-name">Mitral & Tricuspid (AV)</span>
+                <span class="valve-state state-open" id="av-valves-state">Open (Filling)</span>
+              </div>
+              <div class="valve-status-row">
+                <span class="valve-name">Aortic & Pulmonary (Semilunar)</span>
+                <span class="valve-state state-closed" id="sl-valves-state">Closed (Prevent Backflow)</span>
+              </div>
+            </div>
+            <div class="phase-selector-bar">
+              <button class="btn btn-sm btn-secondary phase-btn active" data-phase="diastole">Diastole (Relax & Fill)</button>
+              <button class="btn btn-sm btn-secondary phase-btn" data-phase="systole">Systole (Contract & Eject)</button>
+            </div>
+            <p class="nt-description" id="valve-explanation" style="margin-top: 8px;">
+              During diastole, AV valves open allowing rapid ventricular filling. In systole, high ventricular pressure snaps AV valves shut (producing S1 "Lub") and forces semilunar valves open.
+            </p>
           </div>
         </div>
       </div>

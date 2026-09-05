@@ -2,12 +2,11 @@ import * as THREE from 'three';
 import { GlobalData } from '../data/GlobalData.js';
 
 export class PathwayGraph {
-  constructor() {
-    this.pathways = GlobalData.getPathways();
-  }
+  constructor() {}
 
   getPathway(pathwayId) {
-    return this.pathways[pathwayId];
+    const pathways = GlobalData.getPathways();
+    return pathways ? pathways[pathwayId] : null;
   }
 
   getSplineCurve(pathwayId) {

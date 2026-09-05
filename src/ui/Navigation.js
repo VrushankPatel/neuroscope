@@ -13,9 +13,62 @@ export class NavigationUI {
     this.lightingManager.setTheme(this.currentTheme);
     this.particleEnv.setTheme(this.currentTheme);
 
+    this.currentOrgan = 'brain';
     this.initModeButtons();
     this.initThemeToggle();
     this.initQualitySelect();
+  }
+
+  setOrgan(organId) {
+    this.currentOrgan = organId;
+    const isHeart = organId === 'heart';
+
+    // 1. Update Network / Flow tab
+    const netBtn = document.querySelector('.nav-btn[data-mode="network"]');
+    if (netBtn) {
+      const textSpan = netBtn.querySelector('.nav-text') || netBtn;
+      if (textSpan.classList.contains('nav-text')) {
+        textSpan.textContent = isHeart ? 'Blood Flow' : 'Neural Network';
+      }
+      netBtn.setAttribute('title', isHeart ? 'Simulate Pulmonary & Systemic Hemodynamics' : 'Simulate Whole-Brain Distributed Neural Network');
+    }
+
+    // 2. Update Pathways / Conduction tab
+    const pathBtn = document.querySelector('.nav-btn[data-mode="pathways"]');
+    if (pathBtn) {
+      const textSpan = pathBtn.querySelector('.nav-text') || pathBtn;
+      if (textSpan.classList.contains('nav-text')) {
+        textSpan.textContent = isHeart ? 'Conduction' : 'Pathways';
+      }
+      pathBtn.setAttribute('title', isHeart ? 'Cardiac Electrical Conduction (SA Node, AV Node, Purkinje)' : 'Axonal White Matter Pathways');
+    }
+
+    // 3. Update Cellular / Pumping tab
+    const cellBtn = document.querySelector('.nav-btn[data-mode="cellular"]');
+    if (cellBtn) {
+      const textSpan = cellBtn.querySelector('.nav-text') || cellBtn;
+      if (textSpan.classList.contains('nav-text')) {
+        textSpan.textContent = isHeart ? 'Pumping' : 'Cellular';
+      }
+      cellBtn.setAttribute('title', isHeart ? 'Ventricular Mechanics, Cardiac Cycle & Valve Dynamics' : 'Neuron Action Potential & Synapse');
+    }
+
+    // 4. Update Header Toggle Button (#btn-toggle-network)
+    const toggleNetBtn = document.getElementById('btn-toggle-network');
+    const toggleLabel = document.getElementById('toggle-network-label');
+    if (toggleNetBtn) {
+      toggleNetBtn.setAttribute('title', isHeart ? 'Toggle Blood Flow Overlay' : 'Toggle Neural Network Overlay');
+      if (toggleLabel) {
+        toggleLabel.textContent = isHeart ? 'Flow' : 'Net';
+      }
+    }
+  }
+
+  setMode(mode) {
+    const navButtons = document.querySelectorAll('.nav-btn');
+    navButtons.forEach(b => {
+      b.classList.toggle('active', b.dataset.mode === mode);
+    });
   }
 
   initModeButtons() {

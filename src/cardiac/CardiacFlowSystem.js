@@ -173,6 +173,11 @@ export class CardiacFlowSystem {
     this.flowGroup.visible = false;
   }
 
+  toggle() {
+    this.flowGroup.visible = !this.flowGroup.visible;
+    return this.flowGroup.visible;
+  }
+
   clear() {
     while (this.flowGroup.children.length > 0) {
       const child = this.flowGroup.children[0];
