@@ -62,9 +62,17 @@ class NeuroScopeApp {
 
     this.brainGroup = this.modelBuilder.loadRealBrainModel((loadedGroup) => {
       console.log("Authentic 3D Human Brain loaded successfully!");
+      
+      const initialTheme = document.documentElement.getAttribute('data-theme') || 'light';
+      this.registry.setTheme(initialTheme);
+      
       this.hideLoadingScreen();
     });
     this.sceneManager.scene.add(this.brainGroup);
+
+    this.eventBus.on('THEME_CHANGED', ({ theme }) => {
+      this.registry.setTheme(theme);
+    });
 
     this.selectionManager = new AnatomySelectionManager(
       this.sceneManager.camera,

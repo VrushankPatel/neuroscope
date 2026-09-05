@@ -160,4 +160,51 @@ export class AnatomicalAssetRegistry {
     }
     this.selectedStructureId = null;
   }
+
+  setTheme(theme) {
+    // Current dark mode colors were too dark, so we define pleasant mid-tones for dark mode
+    // and preserve the original deep tones for light mode.
+    const colors = {
+      light: {
+        brainstem: "#1E293B",
+        cerebellum: "#132A22",
+        corpus_callosum: "#F1F5F9",
+        thalamus: "#78350F",
+        primary_motor_cortex: "#082F49",
+        premotor_cortex: "#082F49",
+        primary_somatosensory_cortex: "#331805",
+        wernicke_area: "#2E1065",
+        temporal_association_cortex: "#2E1065",
+        primary_visual_cortex: "#1E1B4B",
+        default: "#0F172A"
+      },
+      dark: {
+        brainstem: "#475569",
+        cerebellum: "#059669",
+        corpus_callosum: "#F8FAFC",
+        thalamus: "#B45309",
+        primary_motor_cortex: "#0284C7",
+        premotor_cortex: "#0284C7",
+        primary_somatosensory_cortex: "#C2410C",
+        wernicke_area: "#7C3AED",
+        temporal_association_cortex: "#7C3AED",
+        primary_visual_cortex: "#4F46E5",
+        default: "#475569"
+      }
+    };
+
+    const palette = colors[theme] || colors.light;
+
+    for (const [id, mesh] of this.structureMap.entries()) {
+      const targetColor = palette[id] || palette.default;
+      mesh.material.color.set(targetColor);
+      
+      // Update original materials cache so hover uses the correct current color
+      const orig = this.originalMaterials.get(id);
+      if (orig) {
+        orig.color = mesh.material.color.clone();
+      }
+      mesh.material.needsUpdate = true;
+    }
+  }
 }
