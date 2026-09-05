@@ -1,11 +1,12 @@
 import * as THREE from 'three';
 
 export class ExploredControlsUI {
-  constructor(registry, explodedManager, cameraController, eventBus) {
+  constructor(registry, explodedManager, cameraController, eventBus, bodyContextManager) {
     this.registry = registry;
     this.explodedManager = explodedManager;
     this.cameraController = cameraController;
     this.eventBus = eventBus;
+    this.bodyContextManager = bodyContextManager;
 
     this.opacitySlider = document.getElementById('opacity-slider');
     this.opacityVal = document.getElementById('opacity-val');
@@ -18,6 +19,18 @@ export class ExploredControlsUI {
   }
 
   initControls() {
+    const bodyPills = document.querySelectorAll('#body-visibility-controls .pill-btn');
+    bodyPills.forEach(btn => {
+      btn.addEventListener('click', () => {
+        bodyPills.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        const mode = btn.dataset.mode;
+        if (this.bodyContextManager) {
+          this.bodyContextManager.setVisibilityMode(mode);
+        }
+      });
+    });
+
     if (this.opacitySlider) {
       this.opacitySlider.addEventListener('input', (e) => {
         const val = parseInt(e.target.value);
@@ -53,9 +66,11 @@ export class ExploredControlsUI {
         this.cameraController.reset();
         this.explodedManager.resetPositions();
         this.registry.resetVisibility();
-        this.registry.setCortexOpacity(0.36);
-        if (this.opacitySlider) this.opacitySlider.value = 36;
-        if (this.opacityVal) this.opacityVal.textContent = '36%';
+        this.registry.setCortexOpacity(0.22);
+        if (this.opacitySlider) this.opacitySlider.value = 22;
+        if (this.opacityVal) this.opacityVal.textContent = '22%';
+        bodyPills.forEach(b => b.classList.toggle('active', b.dataset.mode === 'auto'));
+        if (this.bodyContextManager) this.bodyContextManager.setVisibilityMode('auto');
       });
     }
 

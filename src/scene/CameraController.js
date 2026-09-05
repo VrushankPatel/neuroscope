@@ -15,9 +15,9 @@ export class CameraController {
     this.controls.screenSpacePanning = true; // Essential for free navigation inside the brain
     this.controls.enablePan = true;
 
-    // Allow camera to move right up to and through surfaces
+    // Allow camera to move right up to surfaces and zoom out for full body context
     this.controls.minDistance = 0.01;
-    this.controls.maxDistance = 14.0;
+    this.controls.maxDistance = 35.0;
 
     // Default overview camera view
     this.defaultPosition = new THREE.Vector3(0, 0.35, 4.6);

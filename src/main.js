@@ -11,6 +11,7 @@ import { ExplodedViewManager } from './anatomy/ExplodedViewManager.js';
 
 import { NeuralNetworkGraph } from './network/NeuralNetworkGraph.js';
 import { CardiacFlowSystem } from './cardiac/CardiacFlowSystem.js';
+import { BodyContextManager } from './scene/BodyContextManager.js';
 
 import { EventBus } from './simulation/EventBus.js';
 import { SimulationEngine } from './simulation/SimulationEngine.js';
@@ -57,11 +58,13 @@ class NeuroScopeApp {
     // 3. Whole-Brain Distributed Neural Network & Cardiac Flow Engine
     this.networkGraph = new NeuralNetworkGraph(this.sceneManager.scene);
     this.cardiacFlow = new CardiacFlowSystem(this.sceneManager.scene);
+    this.bodyContextManager = new BodyContextManager(this.sceneManager.scene, this.eventBus);
     
     this.organGroup = null;
 
     this.eventBus.on('THEME_CHANGED', ({ theme }) => {
       this.registry.setTheme(theme);
+      this.bodyContextManager.setTheme(theme);
     });
 
     this.selectionManager = new AnatomySelectionManager(
@@ -112,7 +115,7 @@ class NeuroScopeApp {
     this.contextPanelUI = new ContextPanelUI(document.getElementById('info-panel'), this.eventBus);
     this.timelineUI = new TimelineUI(document.getElementById('timeline-container'), this.simEngine, this.eventBus);
     this.searchModalUI = new SearchModalUI(this.eventBus);
-    this.exploredControlsUI = new ExploredControlsUI(this.registry, this.explodedManager, this.cameraController, this.eventBus);
+    this.exploredControlsUI = new ExploredControlsUI(this.registry, this.explodedManager, this.cameraController, this.eventBus, this.bodyContextManager);
     this.studyQuizUI = new StudyQuizUI(this.eventBus);
     this.clinicalUI = new ClinicalUI(this.eventBus);
     this.explainModalUI = new ExplainModalUI(this.eventBus);
@@ -128,6 +131,7 @@ class NeuroScopeApp {
       this.particleEnv.update(time);
       this.networkGraph.update(delta, time);
       this.cardiacFlow.update(delta, time);
+      this.bodyContextManager.update(this.sceneManager.camera, delta, time);
       this.simEngine.tick(delta);
     });
 
@@ -244,6 +248,9 @@ class NeuroScopeApp {
     }
 
     GlobalData.setOrgan(organId);
+    if (this.bodyContextManager) {
+      this.bodyContextManager.setOrgan(organId);
+    }
     
     // Update UI that depends on the data
     if (this.landingCardsUI) {

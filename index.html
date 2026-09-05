@@ -90,7 +90,17 @@
     <div id="organ-selector" class="organ-selector glass-panel"></div>
 
     <!-- Streamlined Left Dock Controls -->
-    <div class="explored-controls glass-panel">
+      <div class="control-group">
+        <label class="control-label">
+          <span>Body Context</span>
+        </label>
+        <div class="pill-group" id="body-visibility-controls">
+          <button class="pill-btn active" data-mode="auto" title="Fade in on zoom out, fade out on zoom in">Auto</button>
+          <button class="pill-btn" data-mode="show" title="Force body visible">Show</button>
+          <button class="pill-btn" data-mode="hide" title="Force body hidden">Hide</button>
+        </div>
+      </div>
+
       <div class="control-group">
         <label for="opacity-slider" class="control-label">
           <span>Shell Opacity</span>

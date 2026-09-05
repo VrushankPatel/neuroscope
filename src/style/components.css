@@ -153,6 +153,40 @@ input[type="range"] {
   cursor: pointer;
 }
 
+.pill-group {
+  display: flex;
+  background: var(--bg-surface-translucent);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  padding: 2px;
+  gap: 2px;
+}
+
+.pill-btn {
+  flex: 1;
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  font-size: 0.68rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  padding: 4px 6px;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  text-align: center;
+}
+
+.pill-btn:hover {
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.pill-btn.active {
+  background: var(--accent-primary);
+  color: #FFFFFF;
+  font-weight: 600;
+}
+
 .control-actions {
   display: flex;
   flex-direction: column;

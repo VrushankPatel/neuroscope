@@ -44,78 +44,8 @@ export class HeartModelBuilder {
       });
     };
 
-    // Attempt to load external GLB file if present in public/
-    this.gltfLoader.load(
-      '/anatomical_heart.glb',
-      (gltf) => {
-        const rawModel = gltf.scene;
-
-        const box = new THREE.Box3().setFromObject(rawModel);
-        const center = box.getCenter(new THREE.Vector3());
-        const size = box.getSize(new THREE.Vector3());
-        const maxDim = Math.max(size.x, size.y, size.z);
-        const scaleFactor = 3.6 / (maxDim || 1);
-
-        rawModel.position.sub(center);
-
-        const pivot = new THREE.Group();
-        pivot.name = "AnatomicalHeartPivot";
-        pivot.add(rawModel);
-        pivot.scale.set(scaleFactor, scaleFactor, scaleFactor);
-        pivot.rotation.y = -Math.PI / 2;
-        pivot.updateMatrixWorld(true);
-
-        rawModel.traverse((child) => {
-          if (child.isMesh || child instanceof THREE.Mesh) {
-            child.castShadow = true;
-            child.receiveShadow = true;
-            child.geometry.computeVertexNormals();
-
-            const childName = (child.name || "").toLowerCase();
-            const structureId = this.mapPartNameToStructureId(childName);
-            const category = this.getCategoryForStructure(structureId);
-
-            let mat;
-            if (structureId === 'pericardium') {
-              mat = createCorticalShellMaterial("#0F172A");
-            } else if (structureId === 'left_ventricle') {
-              mat = createOrganMaterial("#581C87", "#3B0764", 0.08, 0.90);
-            } else if (structureId === 'right_ventricle') {
-              mat = createOrganMaterial("#4A044E", "#701A75", 0.06, 0.90);
-            } else if (structureId === 'aorta') {
-              mat = createOrganMaterial("#78350F", "#F59E0B", 0.12, 0.95);
-            } else if (structureId === 'pulmonary_artery') {
-              mat = createOrganMaterial("#082F49", "#0284C7", 0.08, 0.92);
-            } else if (structureId === 'valves') {
-              mat = createOrganMaterial("#F1F5F9", "#CBD5E1", 0.15, 0.95);
-            } else {
-              mat = createOrganMaterial("#1E293B", "#38BDF8", 0.06, 0.90);
-            }
-
-            child.material = mat;
-            child.userData = {
-              structureId: structureId,
-              originalName: child.name,
-              category: category,
-              isShell: structureId === 'pericardium',
-              color: mat.color.getHexString()
-            };
-
-            this.registry.registerStructure(structureId, child);
-          }
-        });
-
-        this.rootGroup.add(pivot);
-        this.onModelLoadedCallbacks.forEach(cb => cb(pivot, rawModel));
-
-        if (onComplete) onComplete(this.rootGroup);
-      },
-      undefined,
-      (err) => {
-        console.warn("External /anatomical_heart.glb not found. Constructing authentic 3D biological Heart model.", err);
-        this.buildAuthenticHeartModel(createCorticalShellMaterial, createOrganMaterial, onComplete);
-      }
-    );
+    // Construct the authentic 3D biological Heart model immediately
+    this.buildAuthenticHeartModel(createCorticalShellMaterial, createOrganMaterial, onComplete);
 
     return this.rootGroup;
   }
