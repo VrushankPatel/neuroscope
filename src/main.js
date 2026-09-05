@@ -140,6 +140,7 @@ class NeuroScopeApp {
       this.cardiacCycle.update(delta);
       this.bodyContextManager.update(this.sceneManager.camera, delta, time);
       this.simEngine.tick(delta);
+      this.registry.update(time);
       if (this.isConductionActive && this.currentMode === 'pathways') {
         this.conductionSignalProgress = (this.conductionSignalProgress + delta * 0.75) % 1.0;
         this.signalSystem.updateProgress(this.conductionSignalProgress);

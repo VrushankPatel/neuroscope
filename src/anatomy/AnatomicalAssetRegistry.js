@@ -137,16 +137,32 @@ export class AnatomicalAssetRegistry {
     this.hoveredStructureId = null;
   }
 
-  highlightStructure(structureId) {
+  update(time) {
+    if (this.selectedStructureId) {
+      const mesh = this.structureMap.get(this.selectedStructureId);
+      if (mesh && mesh.material) {
+        // Dynamic organic neural access pulse (0.40 to 0.88 intensity)
+        const pulse = 0.40 + 0.48 * (0.5 + 0.5 * Math.sin(time * 6.5));
+        mesh.material.emissiveIntensity = pulse;
+        mesh.material.needsUpdate = true;
+      }
+    }
+  }
+
+  highlightStructure(structureId, colorHex) {
     this.clearHighlights();
     const mesh = this.structureMap.get(structureId);
     if (!mesh) return;
 
     this.selectedStructureId = structureId;
     
-    // Use base color for highlight instead of semantic color
-    mesh.material.emissive = mesh.material.color.clone();
-    mesh.material.emissiveIntensity = 0.50; // 50% intensity for active structures
+    // Use signal color or structure color for glowing emissive tint
+    if (colorHex) {
+      mesh.material.emissive = new THREE.Color(colorHex);
+    } else {
+      mesh.material.emissive = mesh.material.color.clone();
+    }
+    mesh.material.emissiveIntensity = 0.60;
     
     // Adjust opacity for visual feedback: +/- 50% based on current state
     const orig = this.originalMaterials.get(structureId);

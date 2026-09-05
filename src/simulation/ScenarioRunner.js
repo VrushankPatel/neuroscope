@@ -51,9 +51,9 @@ export class ScenarioRunner {
       this.activeStepIndex = newStepIndex;
       const currentStep = steps[this.activeStepIndex];
 
-      // Highlight active anatomical structure
+      // Highlight active anatomical structure with dynamic signal glow
       if (currentStep.structureId) {
-        this.registry.highlightStructure(currentStep.structureId);
+        this.registry.highlightStructure(currentStep.structureId, currentStep.signalColor);
         
         // Pulse actual neural network nodes in that region
         if (this.networkGraph) {
