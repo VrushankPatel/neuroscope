@@ -1,4 +1,4 @@
-import { SCENARIOS_DATABASE } from '../data/scenariosData.js';
+import { GlobalData } from '../data/GlobalData.js';
 
 export class LandingCardsUI {
   constructor(containerElement, eventBus) {
@@ -13,7 +13,7 @@ export class LandingCardsUI {
     if (!this.container) return;
 
     this.container.innerHTML = '';
-    SCENARIOS_DATABASE.forEach(scenario => {
+    GlobalData.getScenarios().forEach(scenario => {
       const card = document.createElement('div');
       card.className = 'thought-card';
       card.dataset.scenarioId = scenario.id;

@@ -1,9 +1,9 @@
 import * as THREE from 'three';
-import { PATHWAY_DATABASE } from '../data/pathwayData.js';
+import { GlobalData } from '../data/GlobalData.js';
 
 export class PathwayGraph {
   constructor() {
-    this.pathways = PATHWAY_DATABASE;
+    this.pathways = GlobalData.getPathways();
   }
 
   getPathway(pathwayId) {

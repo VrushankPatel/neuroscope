@@ -1,4 +1,4 @@
-import { ANATOMY_DATABASE } from '../data/anatomyData.js';
+import { GlobalData } from '../data/GlobalData.js';
 
 export class TooltipUI {
   constructor(eventBus) {
@@ -58,7 +58,7 @@ export class TooltipUI {
   }
 
   show(structureId) {
-    const data = ANATOMY_DATABASE[structureId];
+    const data = GlobalData.getAnatomy()[structureId];
     if (!data || !this.tooltipEl) return;
 
     this.currentStructureId = structureId;

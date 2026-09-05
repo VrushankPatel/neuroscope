@@ -5,6 +5,7 @@ import { ParticleEnvironment } from './scene/ParticleEnvironment.js';
 
 import { AnatomicalAssetRegistry } from './anatomy/AnatomicalAssetRegistry.js';
 import { BrainModelBuilder } from './anatomy/BrainModelBuilder.js';
+import { HeartModelBuilder } from './anatomy/HeartModelBuilder.js';
 import { AnatomySelectionManager } from './anatomy/AnatomySelectionManager.js';
 import { ExplodedViewManager } from './anatomy/ExplodedViewManager.js';
 
@@ -22,6 +23,7 @@ import { ActionPotentialSim } from './cellular/ActionPotentialSim.js';
 import { SynapseSimulator } from './cellular/SynapseSimulator.js';
 
 import { NavigationUI } from './ui/Navigation.js';
+import { OrganSelectorUI } from './ui/OrganSelectorUI.js';
 import { LandingCardsUI } from './ui/LandingCards.js';
 import { ContextPanelUI } from './ui/ContextPanel.js';
 import { TimelineUI } from './ui/TimelineUI.js';
@@ -34,7 +36,7 @@ import { TooltipUI } from './ui/TooltipUI.js';
 import { FactsWidgetUI } from './ui/FactsWidgetUI.js';
 
 import { PerformanceMonitor } from './utils/PerformanceMonitor.js';
-import { SCENARIOS_DATABASE } from './data/scenariosData.js';
+import { GlobalData } from './data/GlobalData.js';
 import * as THREE from 'three';
 
 class NeuroScopeApp {
@@ -48,27 +50,14 @@ class NeuroScopeApp {
     this.lightingManager = new LightingManager(this.sceneManager.scene);
     this.particleEnv = new ParticleEnvironment(this.sceneManager.scene);
 
-    // 2. Anatomy Engine - Load Authentic 3D Human Brain Model
+    // 2. Anatomy Engine Core
     this.registry = new AnatomicalAssetRegistry();
-    this.modelBuilder = new BrainModelBuilder(this.registry);
-
+    
     // 3. Whole-Brain Distributed Neural Network & Lightning Engine
     this.networkGraph = new NeuralNetworkGraph(this.sceneManager.scene);
-
-    // Build neural network across all 12 brain meshes when loaded
-    this.modelBuilder.onModelLoaded((brainPivot, rawModel) => {
-      this.networkGraph.buildFromBrainMeshes(brainPivot, rawModel);
-    });
-
-    this.brainGroup = this.modelBuilder.loadRealBrainModel((loadedGroup) => {
-      console.log("Authentic 3D Human Brain loaded successfully!");
-      
-      const initialTheme = document.documentElement.getAttribute('data-theme') || 'light';
-      this.registry.setTheme(initialTheme);
-      
-      this.hideLoadingScreen();
-    });
-    this.sceneManager.scene.add(this.brainGroup);
+    
+    this.organGroup = null;
+    this.loadOrgan('brain');
 
     this.eventBus.on('THEME_CHANGED', ({ theme }) => {
       this.registry.setTheme(theme);
@@ -128,6 +117,7 @@ class NeuroScopeApp {
     this.explainModalUI = new ExplainModalUI(this.eventBus);
     this.tooltipUI = new TooltipUI(this.eventBus);
     this.factsWidgetUI = new FactsWidgetUI();
+    this.organSelectorUI = new OrganSelectorUI(this.eventBus);
 
     this.perfMonitor = new PerformanceMonitor(this.sceneManager, this.eventBus);
 
@@ -144,6 +134,9 @@ class NeuroScopeApp {
   }
 
   initEventListeners() {
+    this.eventBus.on('ORGAN_CHANGED', ({ organ }) => {
+      this.loadOrgan(organ);
+    });
     // Neural Network Overlay Toggle Button
     const toggleNetBtn = document.getElementById('btn-toggle-network');
     if (toggleNetBtn) {
@@ -168,19 +161,19 @@ class NeuroScopeApp {
     // Mode Switching
     this.eventBus.on('MODE_CHANGED', ({ mode }) => {
       if (mode === 'network') {
-        this.brainGroup.visible = false;
+        if (this.organGroup) this.organGroup.visible = false;
         this.networkGraph.show();
         this.cellularScene.hide();
         document.getElementById('cellular-panel')?.classList.add('hidden');
       } else if (mode === 'cellular') {
-        this.brainGroup.visible = false;
+        if (this.organGroup) this.organGroup.visible = false;
         this.networkGraph.hide();
         this.pathwayRenderer.clear();
         this.signalSystem.clear();
         this.cellularScene.show();
         document.getElementById('cellular-panel')?.classList.remove('hidden');
       } else {
-        this.brainGroup.visible = true;
+        if (this.organGroup) this.organGroup.visible = true;
         this.cellularScene.hide();
         document.getElementById('cellular-panel')?.classList.add('hidden');
       }
@@ -192,7 +185,7 @@ class NeuroScopeApp {
 
     // Scenario selection from bottom thought chips
     this.eventBus.on('SCENARIO_SELECTED', ({ scenarioId }) => {
-      const scenario = SCENARIOS_DATABASE.find(s => s.id === scenarioId);
+      const scenario = GlobalData.getScenarios().find(s => s.id === scenarioId);
       if (scenario) {
         this.simEngine.loadScenario(scenario);
         this.simEngine.play();
@@ -215,6 +208,51 @@ class NeuroScopeApp {
         this.networkGraph.triggerLightningStrike(position, corePos, "#00E5FF", 3);
       }
     });
+  }
+
+  loadOrgan(organId) {
+    if (this.organGroup) {
+      this.sceneManager.scene.remove(this.organGroup);
+      this.registry.clear();
+      this.networkGraph.hide(); // Hide if we switch to heart
+      this.pathwayRenderer.clear();
+      // Wait, we need to clear the network graph nodes if we switch away from brain
+      // But for simplicity, we'll just leave it hidden if heart.
+    }
+
+    GlobalData.setOrgan(organId);
+    
+    // Update UI that depends on the data
+    this.landingCardsUI.render();
+
+    if (organId === 'brain') {
+      this.modelBuilder = new BrainModelBuilder(this.registry);
+      
+      this.modelBuilder.onModelLoaded((pivot, rawModel) => {
+        this.networkGraph.buildFromBrainMeshes(pivot, rawModel);
+      });
+
+      this.organGroup = this.modelBuilder.loadRealBrainModel((loadedGroup) => {
+        console.log("Authentic 3D Human Brain loaded successfully!");
+        const initialTheme = document.documentElement.getAttribute('data-theme') || 'light';
+        this.registry.setTheme(initialTheme);
+        this.hideLoadingScreen();
+        this.networkGraph.show();
+      });
+      this.sceneManager.scene.add(this.organGroup);
+    } else if (organId === 'heart') {
+      this.modelBuilder = new HeartModelBuilder(this.registry);
+      
+      this.organGroup = this.modelBuilder.loadRealModel((loadedGroup) => {
+        console.log("Authentic 3D Human Heart loaded successfully!");
+        const initialTheme = document.documentElement.getAttribute('data-theme') || 'light';
+        this.registry.setTheme(initialTheme);
+        this.hideLoadingScreen();
+        // Hide network graph as heart doesn't use it currently
+        this.networkGraph.hide();
+      });
+      this.sceneManager.scene.add(this.organGroup);
+    }
   }
 
   hideLoadingScreen() {

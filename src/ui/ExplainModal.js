@@ -1,4 +1,4 @@
-import { ANATOMY_DATABASE } from '../data/anatomyData.js';
+import { GlobalData } from '../data/GlobalData.js';
 
 export class ExplainModalUI {
   constructor(eventBus) {
@@ -35,7 +35,7 @@ export class ExplainModalUI {
 
   openForStructure(structureId) {
     this.currentStructureId = structureId;
-    const data = ANATOMY_DATABASE[structureId];
+    const data = GlobalData.getAnatomy()[structureId];
     if (data && this.titleEl) {
       this.titleEl.textContent = data.name;
     }
@@ -46,7 +46,7 @@ export class ExplainModalUI {
   renderExplanation() {
     if (!this.bodyEl || !this.currentStructureId) return;
 
-    const data = ANATOMY_DATABASE[this.currentStructureId];
+    const data = GlobalData.getAnatomy()[this.currentStructureId];
     if (!data) return;
 
     if (this.currentLevel === 'introductory') {

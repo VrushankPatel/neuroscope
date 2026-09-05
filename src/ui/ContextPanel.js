@@ -1,4 +1,4 @@
-import { ANATOMY_DATABASE } from '../data/anatomyData.js';
+import { GlobalData } from '../data/GlobalData.js';
 
 export class ContextPanelUI {
   constructor(panelElement, eventBus) {
@@ -52,7 +52,7 @@ export class ContextPanelUI {
   }
 
   showStructure(structureId) {
-    const data = ANATOMY_DATABASE[structureId];
+    const data = GlobalData.getAnatomy()[structureId];
     if (!data) return;
 
     this.currentStructureId = structureId;

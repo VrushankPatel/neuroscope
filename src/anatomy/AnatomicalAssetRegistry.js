@@ -207,4 +207,11 @@ export class AnatomicalAssetRegistry {
       mesh.material.needsUpdate = true;
     }
   }
+
+  clear() {
+    this.structureMap.clear();
+    this.originalMaterials.clear();
+    this.selectedStructureId = null;
+    this.hoveredStructureId = null;
+  }
 }

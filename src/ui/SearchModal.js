@@ -1,5 +1,4 @@
-import { ANATOMY_DATABASE } from '../data/anatomyData.js';
-import { PATHWAY_DATABASE } from '../data/pathwayData.js';
+import { GlobalData } from '../data/GlobalData.js';
 
 export class SearchModalUI {
   constructor(eventBus) {
@@ -47,7 +46,7 @@ export class SearchModalUI {
     if (!query) return;
 
     // Search Structures
-    for (const [id, struct] of Object.entries(ANATOMY_DATABASE)) {
+    for (const [id, struct] of Object.entries(GlobalData.getAnatomy())) {
       if (struct.name.toLowerCase().includes(query) || struct.function.toLowerCase().includes(query) || struct.location.toLowerCase().includes(query)) {
         const item = document.createElement('div');
         item.className = 'search-item';
@@ -66,7 +65,7 @@ export class SearchModalUI {
     }
 
     // Search Pathways
-    for (const [id, path] of Object.entries(PATHWAY_DATABASE)) {
+    for (const [id, path] of Object.entries(GlobalData.getPathways())) {
       if (path.name.toLowerCase().includes(query) || path.description.toLowerCase().includes(query)) {
         const item = document.createElement('div');
         item.className = 'search-item';
