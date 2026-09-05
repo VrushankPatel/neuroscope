@@ -624,19 +624,20 @@ export class HeartModelBuilder {
   }
 
   mapPartNameToStructureId(name) {
-    if (name.includes("pericard") || name.includes("shell") || name.includes("epicard")) return "pericardium";
-    if (name.includes("aorta")) return "aorta";
-    if (name.includes("pulmonary")) return "pulmonary_artery";
-    if (name.includes("left_ventricle") || name.includes("l_ventricle") || name.includes("ventricle_l")) return "left_ventricle";
-    if (name.includes("right_ventricle") || name.includes("r_ventricle") || name.includes("ventricle_r")) return "right_ventricle";
-    if (name.includes("septum")) return "septum";
-    if (name.includes("left_atrium") || name.includes("l_atrium") || name.includes("atrium_l")) return "left_atrium";
-    if (name.includes("right_atrium") || name.includes("r_atrium") || name.includes("atrium_r")) return "right_atrium";
-    if (name.includes("cava") || name.includes("svc") || name.includes("ivc")) return "superior_vena_cava";
-    if (name.includes("valve")) return "valves";
-    if (name.includes("coronary")) return "coronary_arteries";
+    const n = (name || "").toLowerCase();
+    if (n.includes("pericard") || n.includes("shell") || n.includes("epicard")) return "pericardium";
+    if (n.includes("aorta")) return "aorta";
+    if (n.includes("pulmonary_artery") || n.includes("pulmonary_trunk") || (n.includes("pulmonary") && !n.includes("valve"))) return "pulmonary_artery";
+    if (n.includes("left") && n.includes("ventricle")) return "left_ventricle";
+    if (n.includes("right") && n.includes("ventricle")) return "right_ventricle";
+    if (n.includes("left") && (n.includes("atrium") || n.includes("cardiac_atrium"))) return "left_atrium";
+    if (n.includes("right") && (n.includes("atrium") || n.includes("cardiac_atrium"))) return "right_atrium";
+    if (n.includes("septum") || n.includes("papillary")) return "septum";
+    if (n.includes("cava") || n.includes("svc") || n.includes("ivc")) return "superior_vena_cava";
+    if (n.includes("valve")) return "valves";
+    if (n.includes("coronary")) return "coronary_arteries";
     
-    return "pericardium";
+    return "left_ventricle";
   }
 
   getCategoryForStructure(structId) {
