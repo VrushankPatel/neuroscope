@@ -19,7 +19,7 @@ export class HeartModelBuilder {
     try {
       // 1. Translucent Biological Outer Pericardium Shell Material (Identical styling to Brain Cortical Shell)
       // Crystal clear smoked-glass revealing internal chambers, cardiac valves, and hemodynamics
-      const createCorticalShellMaterial = (baseTint = "#64748B") => {
+      const createCorticalShellMaterial = (baseTint = "#BE185D") => {
         return new THREE.MeshStandardMaterial({
           color: new THREE.Color(baseTint),
           roughness: 0.22,
@@ -34,7 +34,7 @@ export class HeartModelBuilder {
       // 2. High-Fidelity Translucent Biological Chamber & Vessel Materials (Matching Brain Internal Organ Aesthetics)
       const createOrganMaterial = (colorHex, emissiveHex = "#000000", emissiveInt = 0.0, opacity = 0.70) => {
         return new THREE.MeshStandardMaterial({
-          color: new THREE.Color("#64748B"), // Same monochromatic color as the cortical shell
+          color: new THREE.Color("#BE185D"), // Subtle ruby tint instead of dark muddy gray
           roughness: 0.22,
           metalness: 0.12,
           transparent: true,
@@ -140,7 +140,7 @@ export class HeartModelBuilder {
     }
     shellGeo.computeVertexNormals();
 
-    const shellMat = createCorticalShellMaterial("#64748B");
+    const shellMat = createCorticalShellMaterial("#BE185D");
     const shellMesh = new THREE.Mesh(shellGeo, shellMat);
     shellMesh.name = "pericardium";
     shellMesh.userData = {
@@ -148,7 +148,7 @@ export class HeartModelBuilder {
       originalName: "Pericardium & Epicardial Shell",
       category: "pericardium",
       isShell: true,
-      color: "#64748B"
+      color: "#BE185D"
     };
     this.registry.registerStructure("pericardium", shellMesh);
     pivot.add(shellMesh);

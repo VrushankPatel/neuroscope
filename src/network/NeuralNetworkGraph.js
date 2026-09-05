@@ -401,6 +401,7 @@ export class NeuralNetworkGraph {
       }
       if (this.nodeMaterial) {
         this.nodeMaterial.blending = THREE.NormalBlending;
+        this.nodeMaterial.color.setHex(0x555555); // Darken the vertex colors for contrast on white
         this.nodeMaterial.needsUpdate = true;
       }
       if (this.pulseMaterial) {
@@ -410,6 +411,7 @@ export class NeuralNetworkGraph {
       }
       if (this.activeNodesGroup) {
         this.activeNodesGroup.material.blending = THREE.NormalBlending;
+        this.activeNodesGroup.material.color.setHex(0x555555);
         this.activeNodesGroup.material.needsUpdate = true;
       }
     } else {
@@ -422,6 +424,7 @@ export class NeuralNetworkGraph {
       }
       if (this.nodeMaterial) {
         this.nodeMaterial.blending = THREE.AdditiveBlending;
+        this.nodeMaterial.color.setHex(0xffffff);
         this.nodeMaterial.needsUpdate = true;
       }
       if (this.pulseMaterial) {
@@ -431,6 +434,7 @@ export class NeuralNetworkGraph {
       }
       if (this.activeNodesGroup) {
         this.activeNodesGroup.material.blending = THREE.AdditiveBlending;
+        this.activeNodesGroup.material.color.setHex(0xffffff);
         this.activeNodesGroup.material.needsUpdate = true;
       }
     }
