@@ -288,7 +288,12 @@ export class AnatomicalAssetRegistry {
       const targetColor = palette[id] || palette.default;
       mesh.traverse(node => {
         if (node.material && node.material.color) {
-          node.material.color.set(targetColor);
+          // If mesh has original texture map, keep white tint (0xffffff) so original multi-colors render cleanly!
+          if (node.material.map || node.userData.hasOriginalTexture || mesh.userData.hasOriginalTexture) {
+            node.material.color.setHex(0xffffff);
+          } else {
+            node.material.color.set(targetColor);
+          }
           node.material.needsUpdate = true;
         }
       });

@@ -63,7 +63,8 @@ export class HeartModelBuilder {
           heartPivot.add(rawModel);
           heartPivot.scale.set(scaleFactor, scaleFactor, scaleFactor);
           
-          heartPivot.rotation.y = -Math.PI / 7;
+          // Correct rotation: turn anterior face of heart forward (+Z) toward camera
+          heartPivot.rotation.y = Math.PI - Math.PI / 7;
           heartPivot.rotation.x = 0.08;
           heartPivot.position.set(0, 0, 0);
 
@@ -79,14 +80,32 @@ export class HeartModelBuilder {
           if (meshesFound.length === 1) {
             // Single unified 3D anatomical heart mesh (e.g. heart.glb)
             const singleMesh = meshesFound[0];
-            const style = { color: "#A7B4C2", opacity: 0.45 };
+            const hasTex = !!(singleMesh.material && singleMesh.material.map);
+            
+            // Preserve original GLTF material and textures if present
+            if (singleMesh.material && hasTex) {
+              singleMesh.material.transparent = true;
+              singleMesh.material.depthWrite = false;
+              singleMesh.material.side = THREE.DoubleSide;
+              singleMesh.material.opacity = 0.88;
+              singleMesh.material.needsUpdate = true;
+            } else if (singleMesh.material) {
+              singleMesh.material.transparent = true;
+              singleMesh.material.depthWrite = false;
+              singleMesh.material.side = THREE.DoubleSide;
+              singleMesh.material.needsUpdate = true;
+            } else {
+              const style = { color: "#A7B4C2", opacity: 0.45 };
+              singleMesh.material = createOrganMaterial(style.color, "#000000", 0.0, style.opacity);
+            }
+
             singleMesh.userData = {
               structureId: "left_ventricle",
               originalName: "Anatomical Human Heart",
               category: "ventricle",
-              color: style.color
+              color: "#A7B4C2",
+              hasOriginalTexture: hasTex
             };
-            singleMesh.material = createOrganMaterial(style.color, "#000000", 0.0, style.opacity);
 
             // Register under primary structure keys so all UI/animations locate the mesh
             const primaryKeys = ["left_ventricle", "right_ventricle", "septum", "left_atrium", "right_atrium", "pericardium", "aorta", "pulmonary_artery", "superior_vena_cava", "valves", "coronary_arteries"];
