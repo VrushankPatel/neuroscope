@@ -23,10 +23,38 @@ export class AnatomySelectionManager {
     this.domElement.addEventListener('pointerup', this.onPointerUp.bind(this));
   }
 
-  getStructureIdFromObject(object) {
+  getStructureIdFromObject(object, point) {
     let curr = object;
     while (curr) {
       if (curr.userData && curr.userData.structureId) {
+        // If single mesh (e.g. heart.glb), resolve exact anatomical structure from 3D point
+        if ((curr.userData.hasOriginalTexture || curr.userData.structureId === "left_ventricle") && point) {
+          const pivot = curr.parent ? curr.parent : curr;
+          const localPt = pivot.worldToLocal(point.clone());
+
+          const x = localPt.x;
+          const y = localPt.y;
+          const z = localPt.z;
+
+          // 1. Superior Great Vessels (Y > 0.55)
+          if (y > 0.55) {
+            if (x > 0.30) return "superior_vena_cava";
+            if (x < -0.05) return "pulmonary_artery";
+            return "aorta";
+          }
+          // 2. Upper Atria & Outflow Base (0.0 <= Y <= 0.55)
+          if (y >= 0.0) {
+            if (x > 0.25) return "right_atrium";
+            if (x < -0.25) return "left_atrium";
+            if (z > 0.22) return "coronary_arteries";
+            if (y > 0.28) return "aorta";
+            return "valves";
+          }
+          // 3. Ventricles & Septum (Y < 0.0)
+          if (z <= -0.15) return "septum";
+          if (x >= 0.05) return "right_ventricle";
+          if (x < 0.05) return "left_ventricle";
+        }
         return curr.userData.structureId;
       }
       curr = curr.parent;
@@ -43,7 +71,7 @@ export class AnatomySelectionManager {
     const intersects = this.raycaster.intersectObjects(this.registry.getAllMeshes());
 
     if (intersects.length > 0) {
-      const structureId = this.getStructureIdFromObject(intersects[0].object);
+      const structureId = this.getStructureIdFromObject(intersects[0].object, intersects[0].point);
 
       if (structureId) {
         if (this.hoveredStructureId !== structureId) {
@@ -90,14 +118,14 @@ export class AnatomySelectionManager {
     const intersects = this.raycaster.intersectObjects(this.registry.getAllMeshes());
 
     if (intersects.length > 0) {
-      const structureId = this.getStructureIdFromObject(intersects[0].object);
+      const structureId = this.getStructureIdFromObject(intersects[0].object, intersects[0].point);
       if (!structureId) return;
 
       this.selectedStructureId = structureId;
       this.registry.highlightStructure(structureId);
 
       const targetObj = this.registry.getStructure(structureId);
-      const pos = targetObj ? targetObj.position.clone() : intersects[0].point;
+      const pos = intersects[0].point;
 
       this.eventBus.emit('STRUCTURE_SELECTED', {
         structureId,
