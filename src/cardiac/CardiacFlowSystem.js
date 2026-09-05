@@ -9,102 +9,168 @@ export class CardiacFlowSystem {
     this.scene.add(this.flowGroup);
 
     this.particleStreams = [];
-    this.heartRateBpm = 72; // Standard physiological resting heart rate
+    this.heartRateBpm = 72;
+
+    // Shared glow texture
+    this.glowTexture = this.createGlowTexture();
+
     this.initFlowCircuits();
   }
 
-  initFlowCircuits() {
-    this.flowColor = 0xF1F5F9; // Monochromatic luminous flow
-
-    // Start points from the heart
-    const aortaArch = new THREE.Vector3(0, 1.7, 0); // Arch of aorta
-    const descendingAorta = new THREE.Vector3(0, -1.0, -0.5);
-    const pulmonaryTrunk = new THREE.Vector3(0, 1.2, 0.2); // For future lungs
-
-    // 1. Head & Neck (Carotids)
-    // Distance from aorta (1.7) to top of head (12.25) is about 10.5
-    this.buildVascularBranch(aortaArch, new THREE.Vector3(0, 1, 0), 4.5, 0, 4, 0.06);
-
-    // 2. Left Arm (Subclavian)
-    // Arms extend down to around y=-20
-    this.buildVascularBranch(aortaArch, new THREE.Vector3(-1, 0.2, 0).normalize(), 9.0, 0, 4, 0.05);
-
-    // 3. Right Arm
-    this.buildVascularBranch(aortaArch, new THREE.Vector3(1, 0.2, 0).normalize(), 9.0, 0, 4, 0.05);
-
-    // 4. Lower Body (Descending Aorta -> Iliac -> Femoral -> Legs)
-    // First segment goes straight down to pelvis (world y=-20.3)
-    const descendingCurve = new THREE.CatmullRomCurve3([
-      aortaArch,
-      descendingAorta,
-      new THREE.Vector3(0, -10.0, -0.2), // Abdominal
-      new THREE.Vector3(0, -18.0, 0) // Bifurcation at pelvis
-    ]);
-    this.createStream(descendingCurve, 100, this.flowColor, 0.08, 0.7);
-
-    // Left Leg (from -18 down to -46.5) -> distance is 28.5
-    this.buildVascularBranch(new THREE.Vector3(0, -18.0, 0), new THREE.Vector3(-0.25, -1, 0).normalize(), 12.0, 0, 4, 0.06);
-
-    // Right Leg
-    this.buildVascularBranch(new THREE.Vector3(0, -18.0, 0), new THREE.Vector3(0.25, -1, 0).normalize(), 12.0, 0, 4, 0.06);
-
-    // 5. Pulmonary branches (Future lungs)
-    this.buildVascularBranch(pulmonaryTrunk, new THREE.Vector3(-1, -0.2, 0.5).normalize(), 3.0, 0, 3, 0.05); // Left lung
-    this.buildVascularBranch(pulmonaryTrunk, new THREE.Vector3(1, -0.2, 0.5).normalize(), 3.0, 0, 3, 0.05); // Right lung
-    
-    // 6. Coronary Perfusion (Heart itself)
-    this.buildVascularBranch(new THREE.Vector3(0, 0.5, 0.2), new THREE.Vector3(0, -1, 0.5).normalize(), 1.5, 0, 3, 0.04);
+  // Body-space (y: 0=feet, 168=head) → world-space transform for heart mode
+  // bodyWrapper: scale=0.35, position=(0, -133*0.35, 1.2*0.35)
+  bw(bx, by, bz) {
+    return new THREE.Vector3(bx * 0.35, by * 0.35 - 46.55, bz * 0.35 + 0.42);
   }
 
-  buildVascularBranch(startPos, dir, length, depth, maxDepth, particleSize) {
-    if (depth > maxDepth) return;
+  createGlowTexture() {
+    const canvas = document.createElement('canvas');
+    canvas.width = 64;
+    canvas.height = 64;
+    const ctx = canvas.getContext('2d');
+    const g = ctx.createRadialGradient(32, 32, 0, 32, 32, 30);
+    g.addColorStop(0, 'rgba(255,255,255,1.0)');
+    g.addColorStop(0.3, 'rgba(255,255,255,0.8)');
+    g.addColorStop(0.65, 'rgba(255,255,255,0.25)');
+    g.addColorStop(1, 'rgba(255,255,255,0.0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, 64, 64);
+    return new THREE.CanvasTexture(canvas);
+  }
 
-    const endPos = startPos.clone().add(dir.clone().multiplyScalar(length));
-    
-    // Add organic curvature
-    const midPos = startPos.clone().lerp(endPos, 0.5);
-    midPos.x += (Math.random() - 0.5) * length * 0.15;
-    midPos.z += (Math.random() - 0.5) * length * 0.15;
+  initFlowCircuits() {
+    // ================================================================
+    // ARTERIAL OUTFLOW: Heart → Systemic Arteries → Periphery
+    // Each path follows actual vessel topology from the vascular network
+    // ================================================================
 
-    const curve = new THREE.CatmullRomCurve3([startPos, midPos, endPos]);
-    const particleCount = Math.max(8, Math.floor(length * 5));
-    
-    // Speed slows down as vessels get smaller
-    const speed = Math.max(0.2, 0.8 - depth * 0.15);
-    this.createStream(curve, particleCount, this.flowColor, particleSize, speed);
+    // --- Heart → Ascending Aorta → Arch → R. Carotid → Head ---
+    this.addArterialStream([
+      [-1,133,2], [-2,146,2], [-1,148.5,1], [2,149,1],
+      [3,153,1.5], [3.5,157,2], [3.5,161,2], [3,165,2.5], [4,169,2], [5,173,1.5]
+    ], 40, 0.06, 0.65);
 
-    // Branching logic
-    const nextLength = length * (0.55 + Math.random() * 0.2);
-    const nextSize = particleSize * 0.8;
-    const spread = 0.4 + (depth * 0.1); // Spread increases at smaller branches
+    // --- Heart → Aorta → Arch → L. Carotid → Head ---
+    this.addArterialStream([
+      [-1,133,2], [-2,146,2], [-1,148.5,1], [-2,149.5,0.5],
+      [-3,153,1], [-3.5,157,1.5], [-3.5,161,2], [-3,165,2], [-4,169,2], [-5,173,1.5]
+    ], 40, 0.06, 0.65);
 
-    // Always create at least one branch
-    const dir1 = dir.clone().applyAxisAngle(new THREE.Vector3(0, 0, 1), spread).normalize();
-    dir1.applyAxisAngle(new THREE.Vector3(0, 1, 0), (Math.random() - 0.5));
-    this.buildVascularBranch(endPos, dir1, nextLength, depth + 1, maxDepth, nextSize);
+    // --- Heart → Aorta → R. Subclavian → R. Brachial → R. Hand ---
+    this.addArterialStream([
+      [-1,133,2], [-2,146,2], [-1,148.5,1], [3,149,1],
+      [7,148,0.5], [12,147,0], [20,145,0], [22,130,0], [23,100,0], [24.5,87,0.5], [25,82,0]
+    ], 45, 0.05, 0.6);
 
-    // Second branch
-    if (Math.random() > 0.1 || depth === 0) {
-      const dir2 = dir.clone().applyAxisAngle(new THREE.Vector3(0, 0, 1), -spread).normalize();
-      dir2.applyAxisAngle(new THREE.Vector3(0, 1, 0), (Math.random() - 0.5));
-      this.buildVascularBranch(endPos, dir2, nextLength, depth + 1, maxDepth, nextSize);
-    }
-    
-    // Third branch (capillary beds)
-    if (depth >= maxDepth - 1 && Math.random() > 0.5) {
-      const dir3 = dir.clone().applyAxisAngle(new THREE.Vector3(1, 0, 0), (Math.random() - 0.5)).normalize();
-      this.buildVascularBranch(endPos, dir3, nextLength * 0.8, depth + 1, maxDepth, nextSize * 0.8);
-    }
+    // --- Heart → Aorta → L. Subclavian → L. Brachial → L. Hand ---
+    this.addArterialStream([
+      [-1,133,2], [-2,146,2], [-1,148.5,1], [-3,149.5,0.5],
+      [-7,148.5,0.5], [-12,147.5,0], [-20,145.5,0], [-22,130,0], [-23,100,0], [-24.5,87,0.5], [-25,82,0]
+    ], 45, 0.05, 0.6);
+
+    // --- Heart → Descending Aorta → Abdominal → R. Iliac → R. Femoral → R. Foot ---
+    this.addArterialStream([
+      [-1,133,2], [-2,146,2], [-2,149,-0.5], [-4,147,-2],
+      [-3,138,-3], [-2.5,120,-2.8], [-1.5,100,-2], [-0.5,85,-1], [0,78,0],
+      [4,72,0.5], [8,65,0], [8,48,0.5], [8,32,0], [8,15,-1], [7,5,1.5], [7,2,2]
+    ], 65, 0.055, 0.55);
+
+    // --- Heart → Descending Aorta → Abdominal → L. Iliac → L. Femoral → L. Foot ---
+    this.addArterialStream([
+      [-1,133,2], [-2,146,2], [-2,149,-0.5], [-4,147,-2],
+      [-3,138,-3], [-2.5,120,-2.8], [-1.5,100,-2], [-0.5,85,-1], [0,78,0],
+      [-4,72,0.5], [-8,65,0], [-8,48,0.5], [-8,32,0], [-8,15,-1], [-7,5,1.5], [-7,2,2]
+    ], 65, 0.055, 0.55);
+
+    // --- Abdominal branches (renal + mesenteric) ---
+    this.addArterialStream([
+      [-1.5,100,-2], [1,100,0], [4,100,2], [7,100,3], [10,102,3], [13,103,2]
+    ], 25, 0.04, 0.5);
+    this.addArterialStream([
+      [-1.5,97,-2], [1,96,1], [4,94,3], [5,91,5], [3,88,5]
+    ], 20, 0.04, 0.5);
+
+    // --- Coronary perfusion (local heart) ---
+    this.addArterialStream([
+      [0,134,2.5], [1.5,132,3], [2,130,2.5], [1,128,1.5], [-0.5,127,1]
+    ], 15, 0.035, 0.7);
+    this.addArterialStream([
+      [0,134,2.5], [-1.5,132,3], [-2,130,2.5], [-1,128,1.5], [0.5,127,1]
+    ], 15, 0.035, 0.7);
+
+    // ================================================================
+    // VENOUS RETURN: Periphery → Veins → Heart
+    // ================================================================
+
+    // --- Head → R. Jugular → SVC → Heart ---
+    this.addVenousStream([
+      [4,165,3], [5,160,2.5], [5,155,2], [5,149,1], [5,143,0.5], [4,138,0], [3.5,133,0]
+    ], 30, 0.05, 0.5);
+
+    // --- Head → L. Jugular → SVC → Heart ---
+    this.addVenousStream([
+      [-4,165,3], [-5,160,2.5], [-5,155,2], [-5,149.5,1], [5,149,1], [5,143,0.5], [4,133,0]
+    ], 30, 0.05, 0.5);
+
+    // --- R. Leg → R. Iliac vein → IVC → Heart ---
+    this.addVenousStream([
+      [8,2,-1], [8,15,-1], [8,32,0], [8,48,0.5], [8,65,0],
+      [5,72,0.5], [2,78,1], [2.5,88,0.5], [3,100,-0.5], [3.5,115,-1], [3.5,133,0]
+    ], 50, 0.05, 0.5);
+
+    // --- L. Leg → L. Iliac vein → IVC → Heart ---
+    this.addVenousStream([
+      [-8,2,-1], [-8,15,-1], [-8,32,0], [-8,48,0.5], [-8,65,0],
+      [-5,72,0.5], [-2,78,1], [2.5,88,0.5], [3,100,-0.5], [3.5,115,-1], [3.5,133,0]
+    ], 50, 0.05, 0.5);
+
+    // --- R. Arm → Subclavian vein → SVC → Heart ---
+    this.addVenousStream([
+      [24,82,0], [23,100,0], [22,120,0], [20,145,0], [12,147,0], [5,149,1], [5,143,0.5], [4,133,0]
+    ], 35, 0.045, 0.5);
+
+    // --- L. Arm → Subclavian vein → SVC → Heart ---
+    this.addVenousStream([
+      [-24,82,0], [-23,100,0], [-22,120,0], [-20,145.5,0], [-12,147.5,0],
+      [-5,149.5,1], [5,149,1], [5,143,0.5], [4,133,0]
+    ], 35, 0.045, 0.5);
+
+    // ================================================================
+    // PULMONARY CIRCUIT STUBS (extensible for future lungs)
+    // ================================================================
+    this.addArterialStream([
+      [-1,136,3], [3,135,4], [7,133,5], [10,131,4]
+    ], 15, 0.04, 0.5);
+    this.addArterialStream([
+      [-1,136,3], [-4,135,4], [-8,133,5], [-11,131,4]
+    ], 15, 0.04, 0.5);
+    // Pulmonary venous return
+    this.addVenousStream([
+      [10,131,4], [7,130,3], [4,130,2], [2,133,1]
+    ], 12, 0.04, 0.5);
+    this.addVenousStream([
+      [-11,131,4], [-7,130,3], [-4,130,2], [-2,133,1]
+    ], 12, 0.04, 0.5);
+  }
+
+  addArterialStream(bodyPts, count, particleSize, baseSpeed) {
+    const worldPts = bodyPts.map(p => this.bw(p[0], p[1], p[2]));
+    const curve = new THREE.CatmullRomCurve3(worldPts);
+    this.createStream(curve, count, 0xCBD5E1, particleSize, baseSpeed);
+  }
+
+  addVenousStream(bodyPts, count, particleSize, baseSpeed) {
+    const worldPts = bodyPts.map(p => this.bw(p[0], p[1], p[2]));
+    const curve = new THREE.CatmullRomCurve3(worldPts);
+    // Venous flow uses a slightly cooler/darker tint
+    this.createStream(curve, count, 0x94A3B8, particleSize, baseSpeed);
   }
 
   createStream(curve, count, colorHex, particleSize, baseSpeed) {
     const geometry = new THREE.BufferGeometry();
     const positions = new Float32Array(count * 3);
-    const colors = new Float32Array(count * 3);
     const progress = new Float32Array(count);
     const speeds = new Float32Array(count);
-
-    const baseColor = new THREE.Color(colorHex);
 
     for (let i = 0; i < count; i++) {
       progress[i] = i / count;
@@ -114,36 +180,16 @@ export class CardiacFlowSystem {
       positions[i * 3] = pt.x;
       positions[i * 3 + 1] = pt.y;
       positions[i * 3 + 2] = pt.z;
-
-      colors[i * 3] = baseColor.r;
-      colors[i * 3 + 1] = baseColor.g;
-      colors[i * 3 + 2] = baseColor.b;
     }
 
     geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-    geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
 
-    // Glowing corpuscular disc texture
-    const canvas = document.createElement('canvas');
-    canvas.width = 64;
-    canvas.height = 64;
-    const ctx = canvas.getContext('2d');
-    const gradient = ctx.createRadialGradient(32, 32, 2, 32, 32, 30);
-    gradient.addColorStop(0, 'rgba(255, 255, 255, 1.0)');
-    gradient.addColorStop(0.35, 'rgba(255, 255, 255, 0.85)');
-    gradient.addColorStop(0.7, 'rgba(255, 255, 255, 0.3)');
-    gradient.addColorStop(1, 'rgba(255, 255, 255, 0.0)');
-    ctx.fillStyle = gradient;
-    ctx.fillRect(0, 0, 64, 64);
-    const texture = new THREE.CanvasTexture(canvas);
-
-    // Enhance luminous appearance
     const material = new THREE.PointsMaterial({
-      size: particleSize * 2.0, // Make slightly larger and softer
-      vertexColors: true,
-      map: texture,
+      color: new THREE.Color(colorHex),
+      size: particleSize,
+      map: this.glowTexture,
       transparent: true,
-      opacity: 0.6, // Soft transparency
+      opacity: 0.55,
       blending: THREE.AdditiveBlending,
       depthWrite: false
     });
@@ -165,7 +211,6 @@ export class CardiacFlowSystem {
     if (!this.flowGroup.visible) return;
 
     // Simulate cardiac cycle pulsation (Systole = rapid acceleration, Diastole = steady filling)
-    // Beat cycle ~0.85s (approx 70 bpm)
     const beatFrequency = (this.heartRateBpm / 60) * Math.PI * 2;
     const cardiacPhase = (Math.sin(time * beatFrequency) + 1.0) / 2.0;
     // Systolic ejection surge
