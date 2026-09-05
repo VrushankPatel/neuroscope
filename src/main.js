@@ -57,7 +57,6 @@ class NeuroScopeApp {
     this.networkGraph = new NeuralNetworkGraph(this.sceneManager.scene);
     
     this.organGroup = null;
-    this.loadOrgan('brain');
 
     this.eventBus.on('THEME_CHANGED', ({ theme }) => {
       this.registry.setTheme(theme);
@@ -130,6 +129,7 @@ class NeuroScopeApp {
     });
 
     this.initEventListeners();
+    this.loadOrgan('brain');
     this.sceneManager.startLoop();
   }
 
@@ -211,19 +211,28 @@ class NeuroScopeApp {
   }
 
   loadOrgan(organId) {
+    this.showLoadingScreen(`Loading 3D ${organId === 'brain' ? 'Brain' : 'Heart'}...`);
+
     if (this.organGroup) {
       this.sceneManager.scene.remove(this.organGroup);
       this.registry.clear();
-      this.networkGraph.hide(); // Hide if we switch to heart
+      this.networkGraph.hide();
       this.pathwayRenderer.clear();
-      // Wait, we need to clear the network graph nodes if we switch away from brain
-      // But for simplicity, we'll just leave it hidden if heart.
+      this.signalSystem.clear();
+      this.cameraController.reset();
     }
 
     GlobalData.setOrgan(organId);
     
     // Update UI that depends on the data
-    this.landingCardsUI.render();
+    if (this.landingCardsUI) {
+      this.landingCardsUI.render();
+      this.landingCardsUI.showOverlay();
+    }
+
+    // Close any opened panels
+    document.getElementById('info-panel')?.classList.add('hidden');
+    document.getElementById('timeline-container')?.classList.add('hidden');
 
     if (organId === 'brain') {
       this.modelBuilder = new BrainModelBuilder(this.registry);
@@ -232,26 +241,47 @@ class NeuroScopeApp {
         this.networkGraph.buildFromBrainMeshes(pivot, rawModel);
       });
 
-      this.organGroup = this.modelBuilder.loadRealBrainModel((loadedGroup) => {
-        console.log("Authentic 3D Human Brain loaded successfully!");
-        const initialTheme = document.documentElement.getAttribute('data-theme') || 'light';
-        this.registry.setTheme(initialTheme);
-        this.hideLoadingScreen();
-        this.networkGraph.show();
-      });
+      this.organGroup = this.modelBuilder.loadRealBrainModel(
+        (loadedGroup) => {
+          console.log("Authentic 3D Human Brain loaded successfully!");
+          const initialTheme = document.documentElement.getAttribute('data-theme') || 'light';
+          this.registry.setTheme(initialTheme);
+          this.hideLoadingScreen();
+          this.networkGraph.show();
+        },
+        (err) => {
+          console.error("Brain model load error:", err);
+          this.hideLoadingScreen();
+        }
+      );
       this.sceneManager.scene.add(this.organGroup);
     } else if (organId === 'heart') {
       this.modelBuilder = new HeartModelBuilder(this.registry);
       
-      this.organGroup = this.modelBuilder.loadRealModel((loadedGroup) => {
-        console.log("Authentic 3D Human Heart loaded successfully!");
-        const initialTheme = document.documentElement.getAttribute('data-theme') || 'light';
-        this.registry.setTheme(initialTheme);
-        this.hideLoadingScreen();
-        // Hide network graph as heart doesn't use it currently
-        this.networkGraph.hide();
-      });
+      this.organGroup = this.modelBuilder.loadRealModel(
+        (loadedGroup) => {
+          console.log("Authentic 3D Human Heart loaded successfully!");
+          const initialTheme = document.documentElement.getAttribute('data-theme') || 'light';
+          this.registry.setTheme(initialTheme);
+          this.hideLoadingScreen();
+          this.networkGraph.hide();
+        },
+        (err) => {
+          console.error("Heart model load error:", err);
+          this.hideLoadingScreen();
+        }
+      );
       this.sceneManager.scene.add(this.organGroup);
+    }
+  }
+
+  showLoadingScreen(message = "Loading...") {
+    const loadingScreen = document.getElementById('loading-screen');
+    const status = document.getElementById('loading-status');
+    if (status) status.textContent = message;
+    if (loadingScreen) {
+      loadingScreen.classList.remove('fade-out');
+      loadingScreen.style.display = 'flex';
     }
   }
 
@@ -260,7 +290,10 @@ class NeuroScopeApp {
     if (loadingScreen) {
       setTimeout(() => {
         loadingScreen.classList.add('fade-out');
-      }, 400);
+        setTimeout(() => {
+          loadingScreen.style.display = 'none';
+        }, 500);
+      }, 300);
     }
   }
 }

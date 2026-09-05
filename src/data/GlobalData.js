@@ -8,7 +8,8 @@ export const HEART_PATHWAYS = {};
 export const HEART_SCENARIOS = [
   {
     id: "normal_sinus",
-    title: "Normal Sinus Rhythm",\n    icon: "💓",
+    title: "Normal Sinus Rhythm",
+    icon: "💓",
     description: "Standard cardiac cycle.",
     category: "physiological",
     duration: 3.5,

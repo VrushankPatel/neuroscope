@@ -176,6 +176,14 @@ export class AnatomicalAssetRegistry {
         wernicke_area: "#2E1065",
         temporal_association_cortex: "#2E1065",
         primary_visual_cortex: "#1E1B4B",
+        left_ventricle: "#DC2626",
+        right_ventricle: "#E11D48",
+        left_atrium: "#B91C1C",
+        right_atrium: "#2563EB",
+        aorta: "#DC2626",
+        pulmonary_artery: "#2563EB",
+        superior_vena_cava: "#1D4ED8",
+        valves: "#F8FAFC",
         default: "#0F172A"
       },
       dark: {
@@ -189,6 +197,14 @@ export class AnatomicalAssetRegistry {
         wernicke_area: "#7C3AED",
         temporal_association_cortex: "#7C3AED",
         primary_visual_cortex: "#4F46E5",
+        left_ventricle: "#EF4444",
+        right_ventricle: "#F43F5E",
+        left_atrium: "#F87171",
+        right_atrium: "#3B82F6",
+        aorta: "#F87171",
+        pulmonary_artery: "#38BDF8",
+        superior_vena_cava: "#60A5FA",
+        valves: "#FFFFFF",
         default: "#475569"
       }
     };
