@@ -17,22 +17,21 @@ export class HeartModelBuilder {
 
   loadRealModel(onComplete, onError) {
     try {
-      // 1. Translucent Biological Outer Pericardium Shell Material (Identical styling to Brain Cortical Shell)
-      // Crystal clear smoked-glass revealing internal chambers, cardiac valves, and hemodynamics
-      const createCorticalShellMaterial = (baseTint = "#0F172A") => {
+      // 1. Translucent Biological Outer Pericardium Shell Material
+      const createCorticalShellMaterial = (baseTint = "#BE185D") => {
         return new THREE.MeshStandardMaterial({
           color: new THREE.Color(baseTint),
           roughness: 0.20,
           metalness: 0.15,
           transparent: true,
-          opacity: 0.20, // Translucent depth matching brain cortex
+          opacity: 0.20,
           depthWrite: false,
           side: THREE.DoubleSide
         });
       };
 
-      // 2. High-Fidelity Translucent Biological Chamber & Vessel Materials (Matching Brain Internal Organ Aesthetics)
-      const createOrganMaterial = (colorHex, emissiveHex = "#000000", emissiveInt = 0.0, opacity = 0.70) => {
+      // 2. High-Fidelity Translucent Biological Chamber & Vessel Materials
+      const createOrganMaterial = (colorHex = "#BE185D", emissiveHex = "#000000", emissiveInt = 0.0, opacity = 0.70) => {
         return new THREE.MeshStandardMaterial({
           color: new THREE.Color(colorHex),
           emissive: new THREE.Color(emissiveHex),
@@ -40,17 +39,14 @@ export class HeartModelBuilder {
           roughness: 0.32,
           metalness: 0.10,
           transparent: true,
-          opacity: opacity, // Translucent biological shading revealing interior and blood flow
-          depthWrite: false, // Clean layered transparency without occluding behind chambers
+          opacity: opacity,
+          depthWrite: false,
           side: THREE.DoubleSide
         });
       };
 
-      // Construct the authentic 3D biological Heart model
       this.buildAuthenticHeartModel(createCorticalShellMaterial, createOrganMaterial, () => {
-        setTimeout(() => {
-          if (onComplete) onComplete(this.rootGroup);
-        }, 50);
+        if (onComplete) onComplete(this.rootGroup);
       });
     } catch (err) {
       console.error("Error constructing heart model:", err);
@@ -66,14 +62,13 @@ export class HeartModelBuilder {
     pivot.scale.set(1.18, 1.18, 1.18);
 
     // =========================================================================
-    // 1. Translucent Sculpted Outer Pericardium & Epicardial Shell
-    // Medically authentic human heart external contour:
+    // 1. Outer Epicardial / Pericardium Shell
+    // Medically authentic anatomical heart contour:
     // - Asymmetric inverted conical apex pointing forward, down, and to the left
-    // - Deep anterior interventricular sulcus and atrioventricular (coronary) groove
+    // - Deep anterior interventricular sulcus (LAD groove) & AV coronary sulcus
     // - Conus arteriosus slope leading up into pulmonary trunk
-    // - Posterior flatter diaphragmatic surface
     // =========================================================================
-    const shellGeo = new THREE.SphereGeometry(1.22, 72, 54);
+    const shellGeo = new THREE.SphereGeometry(1.22, 96, 72);
     const shellPos = shellGeo.attributes.position;
 
     for (let i = 0; i < shellPos.count; i++) {
@@ -81,68 +76,65 @@ export class HeartModelBuilder {
       let y = shellPos.getY(i);
       let z = shellPos.getZ(i);
 
-      // Spherical coordinates
       const rOrig = Math.sqrt(x * x + y * y + z * z) || 1;
       const phi = Math.acos(Math.max(-1, Math.min(1, y / rOrig))); // 0 (superior base) to PI (inferior apex)
       const theta = Math.atan2(z, x); // -PI to PI
       const vNorm = phi / Math.PI; // 0 to 1
 
-      // 1. Tapering conical profile along vertical cardio-thoracic axis
-      // Heart is broader at superior base (phi ~ 0.25 - 0.40) and tapers to acute conical apex at bottom (phi -> 1)
       let radiusScale = 1.0;
 
-      // Vertical profile: broad base, conical ventricular taper
-      const baseBulge = Math.sin(phi * 0.85);
-      radiusScale *= (0.35 + 0.75 * baseBulge);
+      // Vertical anatomical profile: broad base, conical taper toward acute apex
+      const baseBulge = Math.sin(phi * 0.88);
+      radiusScale *= (0.32 + 0.78 * baseBulge);
 
-      // 2. Asymmetrical Ventricular Contours:
+      // Asymmetrical Ventricular Contours:
       // Left ventricle is prominent laterally (theta ~ 1.8 to 3.0),
       // Right ventricle forms the broad anterior sternocostal surface (theta ~ 0.2 to 1.8)
-      if (theta > 0.2 && theta < 2.0) {
-        // Anterior RV prominence
-        radiusScale += 0.16 * Math.sin((theta - 0.2) / 1.8 * Math.PI);
-      } else if (theta >= 2.0 || theta < -2.4) {
+      if (theta > 0.15 && theta < 1.95) {
+        // Anterior RV sternocostal wall
+        radiusScale += 0.18 * Math.sin((theta - 0.15) / 1.8 * Math.PI);
+      } else if (theta >= 1.95 || theta < -2.3) {
         // Left ventricle lateral obtuse margin
-        radiusScale += 0.14 * (1.0 - 0.4 * vNorm);
+        radiusScale += 0.15 * (1.0 - 0.35 * vNorm);
       } else {
         // Posterior flatter diaphragmatic surface
-        radiusScale -= 0.12 * Math.sin(Math.abs(theta) * 0.8);
+        radiusScale -= 0.14 * Math.sin(Math.abs(theta) * 0.85);
       }
 
-      // 3. Anterior Interventricular Sulcus (LAD groove)
-      // Runs obliquely down anterior face from theta ~ 0.95 at base to near apex
-      const sulcusTheta = 0.95 - 0.35 * vNorm;
+      // Anterior Interventricular Sulcus (LAD groove running diagonally to near apex)
+      const sulcusTheta = 0.92 - 0.38 * vNorm;
       const distToSulcus = Math.abs(theta - sulcusTheta);
-      if (distToSulcus < 0.45 && vNorm > 0.25 && vNorm < 0.90) {
-        const sulcusDepth = 0.14 * Math.cos((distToSulcus / 0.45) * (Math.PI / 2));
+      if (distToSulcus < 0.42 && vNorm > 0.22 && vNorm < 0.92) {
+        const sulcusDepth = 0.16 * Math.cos((distToSulcus / 0.42) * (Math.PI / 2));
         radiusScale -= sulcusDepth;
       }
 
-      // 4. Coronary (Atrioventricular) Sulcus Groove
-      // Horizontal constriction separating atria from ventricles around phi ~ 0.36 * PI
-      const avDist = Math.abs(phi - 0.36 * Math.PI);
-      if (avDist < 0.32) {
-        radiusScale -= 0.11 * Math.cos((avDist / 0.32) * (Math.PI / 2));
+      // Coronary (Atrioventricular) Sulcus Waist
+      const avDist = Math.abs(phi - 0.38 * Math.PI);
+      if (avDist < 0.30) {
+        radiusScale -= 0.13 * Math.cos((avDist / 0.30) * (Math.PI / 2));
       }
 
-      // 5. Conus Arteriosus / Infundibulum Bulge
-      // Anterior RV outflow tract leading to pulmonary valve (theta ~ 0.6, phi ~ 0.25 to 0.40)
-      if (Math.abs(theta - 0.65) < 0.45 && vNorm > 0.20 && vNorm < 0.45) {
-        radiusScale += 0.12 * Math.cos((Math.abs(theta - 0.65) / 0.45) * (Math.PI / 2));
+      // Infundibulum / Conus Arteriosus Bulge (RV outflow slope)
+      if (Math.abs(theta - 0.62) < 0.42 && vNorm > 0.18 && vNorm < 0.44) {
+        radiusScale += 0.14 * Math.cos((Math.abs(theta - 0.62) / 0.42) * (Math.PI / 2));
       }
 
-      // Transform coordinates with realistic anatomical apex displacement
-      // Real cardiac apex points down, forward (+Z), and to the left (-X)
-      const apexDisplace = Math.pow(vNorm, 1.85);
-      x = (x / rOrig) * radiusScale * 1.05 - 0.38 * apexDisplace;
-      y = (1.05 - 2.25 * vNorm);
-      z = (z / rOrig) * radiusScale * 0.98 + 0.28 * apexDisplace;
+      // Organic surface anatomical muscular contour micro-variation
+      const organicMuscularContour = 0.02 * Math.sin(theta * 3.0) * Math.cos(phi * 4.0);
+      radiusScale += organicMuscularContour;
+
+      // Real cardiac apex points down (-Y), forward (+Z), and to the left (-X)
+      const apexDisplace = Math.pow(vNorm, 1.82);
+      x = (x / rOrig) * radiusScale * 1.06 - 0.40 * apexDisplace;
+      y = (1.06 - 2.28 * vNorm);
+      z = (z / rOrig) * radiusScale * 0.96 + 0.30 * apexDisplace;
 
       shellPos.setXYZ(i, x, y, z);
     }
     shellGeo.computeVertexNormals();
 
-    const shellMat = createCorticalShellMaterial("#0F172A");
+    const shellMat = createCorticalShellMaterial("#667686");
     const shellMesh = new THREE.Mesh(shellGeo, shellMat);
     shellMesh.name = "pericardium";
     shellMesh.userData = {
@@ -150,368 +142,330 @@ export class HeartModelBuilder {
       originalName: "Pericardium & Epicardial Shell",
       category: "pericardium",
       isShell: true,
-      color: "#0F172A"
+      color: "#667686"
     };
     this.registry.registerStructure("pericardium", shellMesh);
     pivot.add(shellMesh);
 
     // =========================================================================
-    // 2. Left Ventricle (Thick muscular conical core forming apical vortex)
-    // Deep dark wine-crimson biological myocardium
+    // 2. Left Ventricle (#A7B4C2)
+    // Muscular, thick-walled elongated conical chamber forming apical vortex
     // =========================================================================
-    const lvGeo = new THREE.CylinderGeometry(0.58, 0.15, 1.45, 36, 24, false);
+    const lvGeo = new THREE.CylinderGeometry(0.56, 0.13, 1.50, 44, 32, false);
     const lvPos = lvGeo.attributes.position;
     for (let i = 0; i < lvPos.count; i++) {
       let x = lvPos.getX(i);
       let y = lvPos.getY(i);
       let z = lvPos.getZ(i);
+      const t = (y + 0.75) / 1.50; // 0 (apex) to 1 (base)
+      
+      // Muscular tapering cross section
+      x *= (0.36 + 0.64 * Math.sin(t * Math.PI * 0.90)) * 1.10;
+      z *= (0.34 + 0.66 * Math.sin(t * Math.PI * 0.90)) * 0.90;
 
-      // T from top (1.0) to apex (0.0)
-      const t = (y + 0.725) / 1.45;
-      // Ellipsoidal muscular cross section
-      x *= (0.42 + 0.58 * Math.sin(t * Math.PI * 0.85)) * 1.05;
-      z *= (0.40 + 0.60 * Math.sin(t * Math.PI * 0.85)) * 0.95;
-
-      // Apical vortex curve
-      if (t < 0.3) {
-        x -= 0.12 * (1.0 - t / 0.3);
-        z += 0.08 * (1.0 - t / 0.3);
+      // Apical vortex curve extending down-left-forward
+      if (t < 0.36) {
+        x -= 0.15 * Math.pow(1.0 - t / 0.36, 1.5);
+        z += 0.11 * Math.pow(1.0 - t / 0.36, 1.5);
       }
 
       lvPos.setXYZ(i, x, y, z);
     }
     lvGeo.computeVertexNormals();
 
-    const lvMat = createOrganMaterial("#881337", "#4C0519", 0.06, 0.72);
+    const lvMat = createOrganMaterial("#A7B4C2", "#000000", 0.0, 0.45);
     const lvMesh = new THREE.Mesh(lvGeo, lvMat);
     lvMesh.name = "left_ventricle";
-    lvMesh.position.set(-0.32, -0.32, 0.16);
-    lvMesh.rotation.z = 0.22;
-    lvMesh.rotation.x = -0.15;
+    lvMesh.position.set(-0.34, -0.34, 0.18);
+    lvMesh.rotation.z = 0.24;
+    lvMesh.rotation.x = -0.16;
     lvMesh.userData = {
       structureId: "left_ventricle",
       originalName: "Left Ventricle",
       category: "ventricle",
-      color: "#881337"
+      color: "#A7B4C2"
     };
     this.registry.registerStructure("left_ventricle", lvMesh);
     pivot.add(lvMesh);
 
     // =========================================================================
-    // 3. Right Ventricle (Anterior crescent chamber wrapping around the septum)
-    // Deep dark ocean navy blue (distinct from LV, green septum, and atria)
+    // 3. Right Ventricle (#8FA0B2)
+    // Crescentic anterior pocket wrapping around LV septum, extending into infundibulum
     // =========================================================================
-    const rvGeo = new THREE.CylinderGeometry(0.62, 0.28, 1.15, 36, 24, false);
+    const rvGeo = new THREE.CylinderGeometry(0.64, 0.25, 1.20, 44, 30, false);
     const rvPos = rvGeo.attributes.position;
     for (let i = 0; i < rvPos.count; i++) {
       let x = rvPos.getX(i);
       let y = rvPos.getY(i);
       let z = rvPos.getZ(i);
-
-      const t = (y + 0.575) / 1.15;
+      const t = (y + 0.60) / 1.20;
+      
       // Sculpt into authentic crescentic pocket wrapping anteriorly
-      // Flatten posterior septal face and extend anterior/conus wall
-      const crescentCurve = 0.25 * Math.sin(t * Math.PI);
-      z += crescentCurve + 0.12;
-      x *= (0.65 + 0.35 * t);
+      const crescentCurve = 0.29 * Math.sin(t * Math.PI);
+      z += crescentCurve + 0.15;
+      x *= (0.60 + 0.40 * t);
 
       // Superior infundibular funneling towards pulmonary valve
-      if (t > 0.7) {
-        x -= 0.15 * (t - 0.7) / 0.3;
-        z += 0.10 * (t - 0.7) / 0.3;
+      if (t > 0.66) {
+        const infFactor = (t - 0.66) / 0.34;
+        x -= 0.19 * infFactor;
+        z += 0.13 * infFactor;
       }
 
       rvPos.setXYZ(i, x, y, z);
     }
     rvGeo.computeVertexNormals();
 
-    const rvMat = createOrganMaterial("#082F49", "#0369A1", 0.06, 0.70);
+    const rvMat = createOrganMaterial("#8FA0B2", "#000000", 0.0, 0.45);
     const rvMesh = new THREE.Mesh(rvGeo, rvMat);
     rvMesh.name = "right_ventricle";
-    rvMesh.position.set(0.38, -0.18, 0.36);
+    rvMesh.position.set(0.36, -0.20, 0.38);
     rvMesh.rotation.z = -0.18;
-    rvMesh.rotation.y = 0.24;
+    rvMesh.rotation.y = 0.26;
     rvMesh.userData = {
       structureId: "right_ventricle",
       originalName: "Right Ventricle & Infundibulum",
       category: "ventricle",
-      color: "#082F49"
+      color: "#8FA0B2"
     };
     this.registry.registerStructure("right_ventricle", rvMesh);
     pivot.add(rvMesh);
 
     // =========================================================================
-    // 4. Interventricular Septum (Curved Muscular Partition)
-    // Deep dark forest green (distinct from ventricles and vessels)
+    // 4. Interventricular Septum (#B8C3CE)
+    // Curved muscular partition convex into RV cavity
     // =========================================================================
-    const septumGeo = new THREE.CylinderGeometry(0.48, 0.32, 1.20, 20, 16, false, 0, Math.PI * 0.85);
+    const septumGeo = new THREE.CylinderGeometry(0.50, 0.28, 1.24, 28, 20, false, 0, Math.PI * 0.88);
     const septumPos = septumGeo.attributes.position;
     for (let i = 0; i < septumPos.count; i++) {
       let x = septumPos.getX(i);
       let y = septumPos.getY(i);
       let z = septumPos.getZ(i);
-      // Give realistic muscular thickness
-      z = z * 0.38 + 0.05;
-      x = x * 0.55;
+      z = z * 0.35 + 0.06;
+      x = x * 0.50;
       septumPos.setXYZ(i, x, y, z);
     }
     septumGeo.computeVertexNormals();
 
-    const septumMat = createOrganMaterial("#132A22", "#059669", 0.06, 0.72);
+    const septumMat = createOrganMaterial("#B8C3CE", "#000000", 0.0, 0.50);
     const septumMesh = new THREE.Mesh(septumGeo, septumMat);
     septumMesh.name = "septum";
-    septumMesh.position.set(0.04, -0.28, 0.18);
+    septumMesh.position.set(0.04, -0.30, 0.18);
     septumMesh.rotation.z = 0.16;
     septumMesh.userData = {
       structureId: "septum",
       originalName: "Interventricular Septum",
       category: "septum",
-      color: "#132A22"
+      color: "#B8C3CE"
     };
     this.registry.registerStructure("septum", septumMesh);
     pivot.add(septumMesh);
 
     // =========================================================================
-    // 5. Left Atrium (Posterior chamber + Left Auricle appendage + 4 Pulmonary Veins)
-    // Refined arterial ruby/pink tone
+    // 5. Left Atrium & Left Auricle Appendage (#A1AFBC)
+    // Posterior chamber above LV base + anteriorly curving left auricle
     // =========================================================================
-    const laBodyGeo = new THREE.SphereGeometry(0.58, 32, 24);
+    const laBodyGeo = new THREE.SphereGeometry(0.58, 40, 28);
     const laBodyPos = laBodyGeo.attributes.position;
     for (let i = 0; i < laBodyPos.count; i++) {
       let x = laBodyPos.getX(i);
       let y = laBodyPos.getY(i);
       let z = laBodyPos.getZ(i);
-      // Posterior smooth oblong shape
-      x *= 1.05;
-      y *= 0.88;
-      z *= 0.90;
+      x *= 1.08;
+      y *= 0.85;
+      z *= 0.92;
       laBodyPos.setXYZ(i, x, y, z);
     }
     laBodyGeo.computeVertexNormals();
     const laBodyMatrix = new THREE.Matrix4().setPosition(-0.28, 0.68, -0.38);
     laBodyGeo.applyMatrix4(laBodyMatrix);
 
-    // Left Auricle (atrial appendage) curving anteriorly over pulmonary trunk base
     const laAuricleCurve = new THREE.CatmullRomCurve3([
       new THREE.Vector3(-0.48, 0.65, -0.15),
-      new THREE.Vector3(-0.55, 0.62, 0.05),
-      new THREE.Vector3(-0.42, 0.55, 0.22),
-      new THREE.Vector3(-0.28, 0.48, 0.28)
+      new THREE.Vector3(-0.56, 0.62, 0.05),
+      new THREE.Vector3(-0.44, 0.55, 0.24),
+      new THREE.Vector3(-0.28, 0.48, 0.30)
     ]);
-    const laAuricleGeo = new THREE.TubeGeometry(laAuricleCurve, 16, 0.11, 12, false);
+    const laAuricleGeo = new THREE.TubeGeometry(laAuricleCurve, 24, 0.11, 14, false);
 
-    // 4 Pulmonary Veins
-    const pv1 = new THREE.TubeGeometry(new THREE.LineCurve3(new THREE.Vector3(-0.55, 0.82, -0.45), new THREE.Vector3(-0.95, 0.90, -0.58)), 8, 0.08, 10, false);
-    const pv2 = new THREE.TubeGeometry(new THREE.LineCurve3(new THREE.Vector3(-0.55, 0.58, -0.48), new THREE.Vector3(-0.92, 0.58, -0.62)), 8, 0.08, 10, false);
-    const pv3 = new THREE.TubeGeometry(new THREE.LineCurve3(new THREE.Vector3(-0.02, 0.82, -0.50), new THREE.Vector3(0.35, 0.88, -0.65)), 8, 0.08, 10, false);
-    const pv4 = new THREE.TubeGeometry(new THREE.LineCurve3(new THREE.Vector3(-0.02, 0.58, -0.52), new THREE.Vector3(0.32, 0.58, -0.68)), 8, 0.08, 10, false);
+    const pv1 = new THREE.TubeGeometry(new THREE.LineCurve3(new THREE.Vector3(-0.55, 0.82, -0.45), new THREE.Vector3(-0.95, 0.90, -0.58)), 12, 0.08, 12, false);
+    const pv2 = new THREE.TubeGeometry(new THREE.LineCurve3(new THREE.Vector3(-0.55, 0.58, -0.48), new THREE.Vector3(-0.92, 0.58, -0.62)), 12, 0.08, 12, false);
+    const pv3 = new THREE.TubeGeometry(new THREE.LineCurve3(new THREE.Vector3(-0.02, 0.82, -0.50), new THREE.Vector3(0.35, 0.88, -0.65)), 12, 0.08, 12, false);
+    const pv4 = new THREE.TubeGeometry(new THREE.LineCurve3(new THREE.Vector3(-0.02, 0.58, -0.52), new THREE.Vector3(0.32, 0.58, -0.68)), 12, 0.08, 12, false);
 
     const mergedLaGeo = BufferGeometryUtils.mergeGeometries([laBodyGeo, laAuricleGeo, pv1, pv2, pv3, pv4]);
-    const laMat = createOrganMaterial("#2E1065", "#7C3AED", 0.06, 0.68);
+    const laMat = createOrganMaterial("#A1AFBC", "#000000", 0.0, 0.42);
     const laMesh = new THREE.Mesh(mergedLaGeo, laMat);
     laMesh.name = "left_atrium";
     laMesh.userData = {
       structureId: "left_atrium",
       originalName: "Left Atrium & Auricle",
       category: "atrium",
-      color: "#2E1065"
+      color: "#A1AFBC"
     };
     this.registry.registerStructure("left_atrium", laMesh);
     pivot.add(laMesh);
 
     // =========================================================================
-    // 6. Right Atrium (Right border chamber + Triangular Right Auricle appendage)
-    // Deep dark teal/marine blue tone
+    // 6. Right Atrium & Right Auricle Appendage (#91A2B3)
+    // Right border sinus venosus chamber + triangular right auricle flap
     // =========================================================================
-    const raBodyGeo = new THREE.SphereGeometry(0.62, 32, 24);
+    const raBodyGeo = new THREE.SphereGeometry(0.62, 40, 28);
     const raBodyPos = raBodyGeo.attributes.position;
     for (let i = 0; i < raBodyPos.count; i++) {
       let x = raBodyPos.getX(i);
       let y = raBodyPos.getY(i);
       let z = raBodyPos.getZ(i);
-      // Oblong sinus venosus profile
-      y *= 1.22;
-      x *= 0.95;
-      z *= 0.92;
+      y *= 1.24;
+      x *= 0.94;
+      z *= 0.90;
       raBodyPos.setXYZ(i, x, y, z);
     }
     raBodyGeo.computeVertexNormals();
     const raBodyMatrix = new THREE.Matrix4().setPosition(0.76, 0.52, 0.06);
     raBodyGeo.applyMatrix4(raBodyMatrix);
 
-    // Right Auricle (triangular muscular flap overlapping ascending aorta root)
     const raAuricleCurve = new THREE.CatmullRomCurve3([
       new THREE.Vector3(0.65, 0.68, 0.15),
       new THREE.Vector3(0.48, 0.65, 0.28),
       new THREE.Vector3(0.28, 0.58, 0.32),
       new THREE.Vector3(0.12, 0.50, 0.30)
     ]);
-    const raAuricleGeo = new THREE.TubeGeometry(raAuricleCurve, 16, 0.12, 12, false);
+    const raAuricleGeo = new THREE.TubeGeometry(raAuricleCurve, 24, 0.12, 14, false);
 
     const mergedRaGeo = BufferGeometryUtils.mergeGeometries([raBodyGeo, raAuricleGeo]);
-    const raMat = createOrganMaterial("#0C4A6E", "#0284C7", 0.06, 0.68);
+    const raMat = createOrganMaterial("#91A2B3", "#000000", 0.0, 0.42);
     const raMesh = new THREE.Mesh(mergedRaGeo, raMat);
     raMesh.name = "right_atrium";
     raMesh.userData = {
       structureId: "right_atrium",
       originalName: "Right Atrium & Auricle",
       category: "atrium",
-      color: "#0C4A6E"
+      color: "#91A2B3"
     };
     this.registry.registerStructure("right_atrium", raMesh);
     pivot.add(raMesh);
 
     // =========================================================================
-    // 7. Ascending Aorta, Aortic Arch & 3 Supra-Aortic Branches
-    // Medically accurate CatmullRom path with Brachiocephalic, Carotid, Subclavian
-    // Deep dark amber/bronze tone
+    // 7. Ascending Aorta, Aortic Arch & 3 Supra-Aortic Branches (#B4BEC8)
+    // Originates from LV outflow behind pulmonary trunk, arches gracefully
     // =========================================================================
     const aortaSpline = new THREE.CatmullRomCurve3([
-      new THREE.Vector3(0.00, 0.35, 0.10),   // Aortic root behind pulmonary trunk
-      new THREE.Vector3(0.08, 1.10, 0.14),   // Ascending aorta
-      new THREE.Vector3(-0.16, 1.72, 0.06),  // Aortic arch summit
-      new THREE.Vector3(-0.52, 1.55, -0.28), // Distal arch
-      new THREE.Vector3(-0.68, 0.85, -0.45), // Descending thoracic aorta
-      new THREE.Vector3(-0.72, -0.35, -0.48)
+      new THREE.Vector3(0.00, 0.35, 0.10),   // Aortic root
+      new THREE.Vector3(0.08, 1.12, 0.14),   // Ascending aorta
+      new THREE.Vector3(-0.16, 1.76, 0.06),  // Aortic arch summit
+      new THREE.Vector3(-0.54, 1.58, -0.28), // Distal arch
+      new THREE.Vector3(-0.70, 0.82, -0.46), // Descending thoracic aorta
+      new THREE.Vector3(-0.74, -0.38, -0.48)
     ]);
-    const aortaGeo = new THREE.TubeGeometry(aortaSpline, 48, 0.24, 20, false);
+    const aortaGeo = new THREE.TubeGeometry(aortaSpline, 60, 0.23, 24, false);
 
-    // Three supra-aortic arch branches (anatomical origins along the arch convex curve)
-    // 1. Brachiocephalic trunk (innominate)
-    const bGeo = new THREE.TubeGeometry(
-      new THREE.LineCurve3(new THREE.Vector3(0.00, 1.66, 0.08), new THREE.Vector3(0.18, 2.26, 0.06)),
-      12, 0.085, 14, false
-    );
-    // 2. Left Common Carotid
-    const cGeo = new THREE.TubeGeometry(
-      new THREE.LineCurve3(new THREE.Vector3(-0.20, 1.72, 0.02), new THREE.Vector3(-0.18, 2.28, -0.02)),
-      12, 0.075, 14, false
-    );
-    // 3. Left Subclavian
-    const sGeo = new THREE.TubeGeometry(
-      new THREE.LineCurve3(new THREE.Vector3(-0.38, 1.68, -0.10), new THREE.Vector3(-0.45, 2.24, -0.18)),
-      12, 0.075, 14, false
-    );
+    const bGeo = new THREE.TubeGeometry(new THREE.LineCurve3(new THREE.Vector3(0.00, 1.68, 0.08), new THREE.Vector3(0.18, 2.28, 0.06)), 16, 0.082, 14, false);
+    const cGeo = new THREE.TubeGeometry(new THREE.LineCurve3(new THREE.Vector3(-0.20, 1.74, 0.02), new THREE.Vector3(-0.18, 2.30, -0.02)), 16, 0.072, 14, false);
+    const sGeo = new THREE.TubeGeometry(new THREE.LineCurve3(new THREE.Vector3(-0.38, 1.70, -0.10), new THREE.Vector3(-0.45, 2.26, -0.18)), 16, 0.072, 14, false);
 
     const mergedAortaGeo = BufferGeometryUtils.mergeGeometries([aortaGeo, bGeo, cGeo, sGeo]);
-    const aortaMat = createOrganMaterial("#78350F", "#D97706", 0.08, 0.78);
+    const aortaMat = createOrganMaterial("#B4BEC8", "#000000", 0.0, 0.52);
     const aortaMesh = new THREE.Mesh(mergedAortaGeo, aortaMat);
     aortaMesh.name = "aorta";
     aortaMesh.userData = {
       structureId: "aorta",
       originalName: "Aorta & Aortic Arch",
       category: "vessel",
-      color: "#78350F"
+      color: "#B4BEC8"
     };
     this.registry.registerStructure("aorta", aortaMesh);
     pivot.add(aortaMesh);
 
     // =========================================================================
-    // 8. Pulmonary Artery Trunk & Left/Right Branches
-    // Originates anteriorly from conus arteriosus, crosses in front of ascending aorta,
-    // and bifurcates beneath the aortic arch
-    // Deep dark midnight cyan tone
+    // 8. Pulmonary Artery Trunk & Branches (#9EADB9)
+    // Originates anteriorly from conus arteriosus, crosses in front of ascending aorta
     // =========================================================================
     const paTrunkSpline = new THREE.CatmullRomCurve3([
       new THREE.Vector3(0.24, 0.38, 0.36),   // Conus arteriosus of RV
-      new THREE.Vector3(0.14, 0.90, 0.28),   // Passing anterior to ascending aorta
-      new THREE.Vector3(-0.14, 1.28, 0.08)   // Bifurcation under aortic arch
+      new THREE.Vector3(0.14, 0.92, 0.28),   // Passing anterior to ascending aorta
+      new THREE.Vector3(-0.14, 1.30, 0.08)   // Bifurcation under aortic arch
     ]);
-    const paTrunkGeo = new THREE.TubeGeometry(paTrunkSpline, 32, 0.22, 18, false);
+    const paTrunkGeo = new THREE.TubeGeometry(paTrunkSpline, 40, 0.21, 20, false);
 
-    // Left pulmonary artery passing to left lung
     const leftPaCurve = new THREE.CatmullRomCurve3([
-      new THREE.Vector3(-0.14, 1.28, 0.08),
-      new THREE.Vector3(-0.52, 1.24, -0.12),
-      new THREE.Vector3(-0.85, 1.20, -0.26)
+      new THREE.Vector3(-0.14, 1.30, 0.08),
+      new THREE.Vector3(-0.52, 1.26, -0.12),
+      new THREE.Vector3(-0.85, 1.22, -0.26)
     ]);
-    const leftPaGeo = new THREE.TubeGeometry(leftPaCurve, 16, 0.14, 14, false);
+    const leftPaGeo = new THREE.TubeGeometry(leftPaCurve, 20, 0.13, 14, false);
 
-    // Right pulmonary artery passing horizontally beneath the aortic arch to right lung
     const rightPaCurve = new THREE.CatmullRomCurve3([
-      new THREE.Vector3(-0.14, 1.28, 0.08),
-      new THREE.Vector3(0.32, 1.22, -0.06),
-      new THREE.Vector3(0.80, 1.16, -0.18)
+      new THREE.Vector3(-0.14, 1.30, 0.08),
+      new THREE.Vector3(0.32, 1.24, -0.06),
+      new THREE.Vector3(0.80, 1.18, -0.18)
     ]);
-    const rightPaGeo = new THREE.TubeGeometry(rightPaCurve, 16, 0.14, 14, false);
+    const rightPaGeo = new THREE.TubeGeometry(rightPaCurve, 20, 0.13, 14, false);
 
     const mergedPaGeo = BufferGeometryUtils.mergeGeometries([paTrunkGeo, leftPaGeo, rightPaGeo]);
-    const paMat = createOrganMaterial("#164E63", "#0891B2", 0.06, 0.78);
+    const paMat = createOrganMaterial("#9EADB9", "#000000", 0.0, 0.52);
     const paMesh = new THREE.Mesh(mergedPaGeo, paMat);
     paMesh.name = "pulmonary_artery";
     paMesh.userData = {
       structureId: "pulmonary_artery",
       originalName: "Pulmonary Artery Trunk & Branches",
       category: "vessel",
-      color: "#164E63"
+      color: "#9EADB9"
     };
     this.registry.registerStructure("pulmonary_artery", paMesh);
     pivot.add(paMesh);
 
     // =========================================================================
-    // 9. Superior Vena Cava & Inferior Vena Cava
-    // Vertical systemic venous trunks entering posterior right atrium
-    // Deep dark indigo tone
+    // 9. Superior Vena Cava & Inferior Vena Cava (#899AA9)
+    // Systemic venous trunks entering posterior right atrium
     // =========================================================================
     const svcSpline = new THREE.CatmullRomCurve3([
       new THREE.Vector3(0.82, 0.85, 0.02),
-      new THREE.Vector3(0.82, 1.42, -0.02),
-      new THREE.Vector3(0.82, 1.95, -0.04)
+      new THREE.Vector3(0.82, 1.44, -0.02),
+      new THREE.Vector3(0.82, 1.98, -0.04)
     ]);
-    const svcGeo = new THREE.TubeGeometry(svcSpline, 20, 0.19, 16, false);
+    const svcGeo = new THREE.TubeGeometry(svcSpline, 24, 0.18, 18, false);
 
     const ivcSpline = new THREE.CatmullRomCurve3([
       new THREE.Vector3(0.76, 0.20, 0.02),
-      new THREE.Vector3(0.76, -0.32, 0.01),
-      new THREE.Vector3(0.76, -0.75, 0.00)
+      new THREE.Vector3(0.76, -0.34, 0.01),
+      new THREE.Vector3(0.76, -0.78, 0.00)
     ]);
-    const ivcGeo = new THREE.TubeGeometry(ivcSpline, 16, 0.18, 16, false);
+    const ivcGeo = new THREE.TubeGeometry(ivcSpline, 20, 0.17, 18, false);
 
     const mergedSvcGeo = BufferGeometryUtils.mergeGeometries([svcGeo, ivcGeo]);
-    const svcMat = createOrganMaterial("#1E1B4B", "#2563EB", 0.05, 0.76);
+    const svcMat = createOrganMaterial("#899AA9", "#000000", 0.0, 0.52);
     const svcMesh = new THREE.Mesh(mergedSvcGeo, svcMat);
     svcMesh.name = "superior_vena_cava";
     svcMesh.userData = {
       structureId: "superior_vena_cava",
       originalName: "Superior & Inferior Vena Cava",
       category: "vessel",
-      color: "#1E1B4B"
+      color: "#899AA9"
     };
     this.registry.registerStructure("superior_vena_cava", svcMesh);
     pivot.add(svcMesh);
 
     // =========================================================================
-    // 10. Cardiac Valves (Mitral, Tricuspid, Aortic, Pulmonary Annuli & Cusps)
-    // Pearlescent ivory white-matter bridge tone matching brain corpus callosum
+    // 10. Cardiac Valves (#D4DBE2)
+    // Mitral, Tricuspid, Aortic, Pulmonary annuli
     // =========================================================================
-    const valveMat = createOrganMaterial("#E2E8F0", "#CBD5E1", 0.12, 0.85);
+    const valveMat = createOrganMaterial("#D4DBE2", "#000000", 0.0, 0.65);
 
-    // Mitral Valve annulus (between LA and LV)
-    const mitralGeo = new THREE.TorusGeometry(0.30, 0.04, 14, 28);
-    const mMatrix = new THREE.Matrix4()
-      .makeRotationFromEuler(new THREE.Euler(Math.PI / 2.3, 0.22, 0))
-      .setPosition(-0.24, 0.30, -0.12);
+    const mitralGeo = new THREE.TorusGeometry(0.30, 0.04, 16, 30);
+    const mMatrix = new THREE.Matrix4().makeRotationFromEuler(new THREE.Euler(Math.PI / 2.3, 0.22, 0)).setPosition(-0.24, 0.30, -0.12);
     mitralGeo.applyMatrix4(mMatrix);
 
-    // Tricuspid Valve annulus (between RA and RV)
-    const tricuspidGeo = new THREE.TorusGeometry(0.34, 0.04, 14, 28);
-    const tMatrix = new THREE.Matrix4()
-      .makeRotationFromEuler(new THREE.Euler(Math.PI / 2.2, -0.22, 0))
-      .setPosition(0.32, 0.22, 0.22);
+    const tricuspidGeo = new THREE.TorusGeometry(0.34, 0.04, 16, 30);
+    const tMatrix = new THREE.Matrix4().makeRotationFromEuler(new THREE.Euler(Math.PI / 2.2, -0.22, 0)).setPosition(0.32, 0.22, 0.22);
     tricuspidGeo.applyMatrix4(tMatrix);
 
-    // Aortic Valve annulus (root of ascending aorta)
-    const aorticGeo = new THREE.TorusGeometry(0.24, 0.038, 14, 28);
-    const aMatrix = new THREE.Matrix4()
-      .makeRotationFromEuler(new THREE.Euler(Math.PI / 2.1, 0.05, 0))
-      .setPosition(0.00, 0.40, 0.12);
+    const aorticGeo = new THREE.TorusGeometry(0.24, 0.038, 16, 30);
+    const aMatrix = new THREE.Matrix4().makeRotationFromEuler(new THREE.Euler(Math.PI / 2.1, 0.05, 0)).setPosition(0.00, 0.40, 0.12);
     aorticGeo.applyMatrix4(aMatrix);
 
-    // Pulmonary Valve annulus (conus arteriosus outflow)
-    const pulmonaryGeo = new THREE.TorusGeometry(0.22, 0.036, 14, 28);
-    const pMatrix = new THREE.Matrix4()
-      .makeRotationFromEuler(new THREE.Euler(Math.PI / 2.3, -0.28, 0))
-      .setPosition(0.20, 0.52, 0.32);
+    const pulmonaryGeo = new THREE.TorusGeometry(0.22, 0.036, 16, 30);
+    const pMatrix = new THREE.Matrix4().makeRotationFromEuler(new THREE.Euler(Math.PI / 2.3, -0.28, 0)).setPosition(0.20, 0.52, 0.32);
     pulmonaryGeo.applyMatrix4(pMatrix);
 
     const mergedValvesGeo = BufferGeometryUtils.mergeGeometries([mitralGeo, tricuspidGeo, aorticGeo, pulmonaryGeo]);
@@ -521,18 +475,17 @@ export class HeartModelBuilder {
       structureId: "valves",
       originalName: "Cardiac Valves (Mitral, Tricuspid, Aortic, Pulmonary)",
       category: "valve",
-      color: "#E2E8F0"
+      color: "#D4DBE2"
     };
     this.registry.registerStructure("valves", valvesMesh);
     pivot.add(valvesMesh);
 
     // =========================================================================
-    // 11. Coronary Arteries (LAD, LCx, RCA with Real Anatomical Branching)
-    // Dark gold / amber vasculature tracing the true cardiac sulci
+    // 11. Coronary Arteries (#C1CAD3)
+    // LAD, LCx, RCA with natural sulcal curves
     // =========================================================================
-    const coronaryMat = createOrganMaterial("#92400E", "#D97706", 0.15, 0.85);
+    const coronaryMat = createOrganMaterial("#C1CAD3", "#000000", 0.0, 0.65);
 
-    // Left Anterior Descending (LAD) along anterior interventricular sulcus
     const ladSpline = new THREE.CatmullRomCurve3([
       new THREE.Vector3(-0.06, 0.48, 0.24),
       new THREE.Vector3(0.04, 0.22, 0.38),
@@ -540,26 +493,23 @@ export class HeartModelBuilder {
       new THREE.Vector3(-0.16, -0.52, 0.32),
       new THREE.Vector3(-0.32, -0.80, 0.24)
     ]);
-    const ladGeo = new THREE.TubeGeometry(ladSpline, 36, 0.042, 10, false);
+    const ladGeo = new THREE.TubeGeometry(ladSpline, 38, 0.040, 12, false);
 
-    // Diagonal branch from LAD over LV obtuse margin
     const diagSpline = new THREE.CatmullRomCurve3([
       new THREE.Vector3(0.02, 0.05, 0.38),
       new THREE.Vector3(-0.22, -0.15, 0.35),
       new THREE.Vector3(-0.45, -0.38, 0.26)
     ]);
-    const diagGeo = new THREE.TubeGeometry(diagSpline, 16, 0.030, 8, false);
+    const diagGeo = new THREE.TubeGeometry(diagSpline, 18, 0.028, 10, false);
 
-    // Left Circumflex (LCx) in left AV groove
     const lcxSpline = new THREE.CatmullRomCurve3([
       new THREE.Vector3(-0.06, 0.48, 0.24),
       new THREE.Vector3(-0.35, 0.38, 0.15),
       new THREE.Vector3(-0.52, 0.28, -0.10),
       new THREE.Vector3(-0.48, 0.05, -0.28)
     ]);
-    const lcxGeo = new THREE.TubeGeometry(lcxSpline, 20, 0.035, 8, false);
+    const lcxGeo = new THREE.TubeGeometry(lcxSpline, 22, 0.033, 10, false);
 
-    // Right Coronary Artery (RCA) in right atrioventricular groove
     const rcaSpline = new THREE.CatmullRomCurve3([
       new THREE.Vector3(0.12, 0.48, 0.20),
       new THREE.Vector3(0.45, 0.30, 0.30),
@@ -567,15 +517,14 @@ export class HeartModelBuilder {
       new THREE.Vector3(0.64, -0.22, 0.14),
       new THREE.Vector3(0.35, -0.52, -0.04)
     ]);
-    const rcaGeo = new THREE.TubeGeometry(rcaSpline, 32, 0.042, 10, false);
+    const rcaGeo = new THREE.TubeGeometry(rcaSpline, 34, 0.040, 12, false);
 
-    // Acute marginal branch of RCA
     const margSpline = new THREE.CatmullRomCurve3([
       new THREE.Vector3(0.66, -0.05, 0.20),
       new THREE.Vector3(0.55, -0.25, 0.28),
       new THREE.Vector3(0.28, -0.50, 0.26)
     ]);
-    const margGeo = new THREE.TubeGeometry(margSpline, 16, 0.030, 8, false);
+    const margGeo = new THREE.TubeGeometry(margSpline, 18, 0.028, 10, false);
 
     const mergedCoronaryGeo = BufferGeometryUtils.mergeGeometries([ladGeo, diagGeo, lcxGeo, rcaGeo, margGeo]);
     const coronaryMesh = new THREE.Mesh(mergedCoronaryGeo, coronaryMat);
@@ -584,12 +533,12 @@ export class HeartModelBuilder {
       structureId: "coronary_arteries",
       originalName: "Coronary Arteries (LAD, LCx, RCA)",
       category: "vessel",
-      color: "#92400E"
+      color: "#C1CAD3"
     };
     this.registry.registerStructure("coronary_arteries", coronaryMesh);
     pivot.add(coronaryMesh);
 
-    // Anatomical orientation: Slight tilt ~18 degrees to match thoracic cardiac axis
+    // Thoracic cardiac axis orientation: 18 degree anatomical tilt
     pivot.rotation.y = -Math.PI / 7;
     pivot.rotation.x = 0.08;
     pivot.position.set(0, 0, 0);
@@ -613,7 +562,7 @@ export class HeartModelBuilder {
     if (name.includes("valve")) return "valves";
     if (name.includes("coronary")) return "coronary_arteries";
     
-    return "pericardium"; 
+    return "pericardium";
   }
 
   getCategoryForStructure(structId) {

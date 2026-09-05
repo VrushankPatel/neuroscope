@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { GlobalData } from '../data/GlobalData.js';
 
 export class AnatomicalAssetRegistry {
   constructor() {
@@ -50,18 +51,32 @@ export class AnatomicalAssetRegistry {
   }
 
   setCortexOpacity(opacityValue) {
+    const isHeart = (GlobalData && GlobalData.currentOrgan === 'heart');
+
     for (const [id, mesh] of this.structureMap.entries()) {
-      if (this.isShellMesh(mesh)) {
-        const newOp = Math.max(0.04, opacityValue);
-        mesh.material.transparent = newOp < 0.99;
-        mesh.material.opacity = newOp;
+      const orig = this.originalMaterials.get(id);
+      const baseOp = orig ? orig.opacity : 0.45;
+
+      if (isHeart) {
+        // Whole Heart Mode: Scale all heart structures together with slider
+        const scaleFactor = opacityValue / 0.22;
+        const targetOp = Math.max(0.04, Math.min(0.85, baseOp * scaleFactor));
+        mesh.material.transparent = true; // Always keep transparent true to prevent solid occlusion
+        mesh.material.opacity = targetOp;
         mesh.material.depthWrite = false;
         mesh.material.needsUpdate = true;
-        
-        const orig = this.originalMaterials.get(id);
-        if (orig) {
-          orig.opacity = newOp;
-          orig.transparent = mesh.material.transparent;
+      } else {
+        // Brain Mode: Adjust outer cortical shell
+        if (this.isShellMesh(mesh)) {
+          const newOp = Math.max(0.04, Math.min(0.85, opacityValue));
+          mesh.material.transparent = true; // Always keep transparent true so shell never turns solid
+          mesh.material.opacity = newOp;
+          mesh.material.depthWrite = false;
+          mesh.material.needsUpdate = true;
+          
+          if (orig) {
+            orig.opacity = newOp;
+          }
         }
       }
     }
@@ -204,18 +219,18 @@ export class AnatomicalAssetRegistry {
         prefrontal_cortex: "#0F172A",
         broca_area: "#0F172A",
 
-        // Authentic Heart Structures (Dark Side biological palette: green, dark blue, deep wine, dark plum)
-        pericardium: "#0F172A",
-        left_ventricle: "#881337",      // Deep dark wine crimson
-        right_ventricle: "#082F49",     // Deep dark ocean navy blue
-        septum: "#132A22",              // Deep dark forest green
-        left_atrium: "#2E1065",         // Deep dark plum purple
-        right_atrium: "#0C4A6E",        // Deep dark marine teal blue
-        aorta: "#78350F",               // Deep dark amber bronze
-        pulmonary_artery: "#164E63",    // Deep dark midnight cyan
-        superior_vena_cava: "#1E1B4B",  // Deep dark indigo
-        valves: "#E2E8F0",              // Pearlescent translucent ivory
-        coronary_arteries: "#92400E",   // Dark gold
+        // Authentic Heart Structures (Cool Neutral Medical Palette)
+        pericardium: "#667686",
+        left_ventricle: "#A7B4C2",
+        right_ventricle: "#8FA0B2",
+        septum: "#B8C3CE",
+        left_atrium: "#A1AFBC",
+        right_atrium: "#91A2B3",
+        aorta: "#B4BEC8",
+        pulmonary_artery: "#9EADB9",
+        superior_vena_cava: "#899AA9",
+        valves: "#D4DBE2",
+        coronary_arteries: "#C1CAD3",
 
         default: "#0F172A"
       },
@@ -234,18 +249,18 @@ export class AnatomicalAssetRegistry {
         prefrontal_cortex: "#475569",
         broca_area: "#475569",
 
-        // Authentic Heart Structures (Dark Mode glowing counterparts)
-        pericardium: "#475569",
-        left_ventricle: "#E11D48",
-        right_ventricle: "#0284C7",
-        septum: "#059669",
-        left_atrium: "#7C3AED",
-        right_atrium: "#0EA5E9",
-        aorta: "#D97706",
-        pulmonary_artery: "#06B6D4",
-        superior_vena_cava: "#3B82F6",
-        valves: "#F8FAFC",
-        coronary_arteries: "#F59E0B",
+        // Authentic Heart Structures (Cool Neutral Medical Palette)
+        pericardium: "#667686",
+        left_ventricle: "#A7B4C2",
+        right_ventricle: "#8FA0B2",
+        septum: "#B8C3CE",
+        left_atrium: "#A1AFBC",
+        right_atrium: "#91A2B3",
+        aorta: "#B4BEC8",
+        pulmonary_artery: "#9EADB9",
+        superior_vena_cava: "#899AA9",
+        valves: "#D4DBE2",
+        coronary_arteries: "#C1CAD3",
 
         default: "#475569"
       }

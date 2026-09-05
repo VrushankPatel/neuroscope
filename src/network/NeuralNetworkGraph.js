@@ -395,23 +395,24 @@ export class NeuralNetworkGraph {
     if (theme === 'light') {
       if (this.edgeMaterial) {
         this.edgeMaterial.color.setHex(0x0284C7); // Darker blue for light background
-        this.edgeMaterial.opacity = 0.25; // More opaque
+        this.edgeMaterial.opacity = 0.6; // Much more opaque for light background
         this.edgeMaterial.blending = THREE.NormalBlending; // Avoid washing out on white background
         this.edgeMaterial.needsUpdate = true;
       }
       if (this.nodeMaterial) {
         this.nodeMaterial.blending = THREE.NormalBlending;
-        this.nodeMaterial.color.setHex(0x555555); // Darken the vertex colors for contrast on white
+        this.nodeMaterial.vertexColors = false; // Disable vertex colors which may wash out
+        this.nodeMaterial.color.setHex(0x0369A1); // Solid deep blue for contrast on white
         this.nodeMaterial.needsUpdate = true;
       }
       if (this.pulseMaterial) {
-        this.pulseMaterial.color.setHex(0x0369A1); // Deep blue pulses
+        this.pulseMaterial.color.setHex(0x0F172A); // Almost black/dark slate for visible pulses
         this.pulseMaterial.blending = THREE.NormalBlending;
         this.pulseMaterial.needsUpdate = true;
       }
       if (this.activeNodesGroup) {
         this.activeNodesGroup.material.blending = THREE.NormalBlending;
-        this.activeNodesGroup.material.color.setHex(0x555555);
+        this.activeNodesGroup.material.color.setHex(0x0369A1);
         this.activeNodesGroup.material.needsUpdate = true;
       }
     } else {
@@ -424,6 +425,7 @@ export class NeuralNetworkGraph {
       }
       if (this.nodeMaterial) {
         this.nodeMaterial.blending = THREE.AdditiveBlending;
+        this.nodeMaterial.vertexColors = true;
         this.nodeMaterial.color.setHex(0xffffff);
         this.nodeMaterial.needsUpdate = true;
       }

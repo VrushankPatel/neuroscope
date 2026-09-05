@@ -8,11 +8,8 @@ export class CardiacFlowSystem {
     this.flowGroup.visible = false;
     this.scene.add(this.flowGroup);
 
-    this.particleStreams = [];
+    this.fluidStreams = [];
     this.heartRateBpm = 72;
-
-    // Shared glow texture
-    this.glowTexture = this.createGlowTexture();
 
     this.initFlowCircuits();
   }
@@ -23,216 +20,187 @@ export class CardiacFlowSystem {
     return new THREE.Vector3(bx * 0.35, by * 0.35 - 46.55, bz * 0.35 + 0.42);
   }
 
-  createGlowTexture() {
-    const canvas = document.createElement('canvas');
-    canvas.width = 64;
-    canvas.height = 64;
-    const ctx = canvas.getContext('2d');
-    const g = ctx.createRadialGradient(32, 32, 0, 32, 32, 30);
-    g.addColorStop(0, 'rgba(255,255,255,1.0)');
-    g.addColorStop(0.3, 'rgba(255,255,255,0.8)');
-    g.addColorStop(0.65, 'rgba(255,255,255,0.25)');
-    g.addColorStop(1, 'rgba(255,255,255,0.0)');
-    ctx.fillStyle = g;
-    ctx.fillRect(0, 0, 64, 64);
-    return new THREE.CanvasTexture(canvas);
+  createFluidMaterial(colorHex, isArterial = true, opacity = 0.35) {
+    return new THREE.ShaderMaterial({
+      uniforms: {
+        uTime: { value: 0 },
+        uPulse: { value: 1.0 },
+        uBloodColor: { value: new THREE.Color(colorHex) },
+        uFlowDirection: { value: isArterial ? 1.0 : -1.0 },
+        uBaseOpacity: { value: opacity }
+      },
+      vertexShader: `
+        varying vec2 vUv;
+        varying vec3 vNormal;
+        varying vec3 vViewPosition;
+
+        void main() {
+          vUv = uv;
+          vNormal = normalize(normalMatrix * normal);
+          vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+          vViewPosition = -mvPosition.xyz;
+          gl_Position = projectionMatrix * mvPosition;
+        }
+      `,
+      fragmentShader: `
+        uniform float uTime;
+        uniform float uPulse;
+        uniform vec3 uBloodColor;
+        uniform float uFlowDirection;
+        uniform float uBaseOpacity;
+
+        varying vec2 vUv;
+        varying vec3 vNormal;
+        varying vec3 vViewPosition;
+
+        void main() {
+          // Flow along length of vessel tube lumen (vUv.x goes from 0 to 1 along tube path)
+          float flowPos = vUv.x * uFlowDirection * 18.0 - uTime * 2.8 * (0.8 + 0.4 * uPulse);
+          
+          // Continuous fluid stream density waves
+          float wave1 = sin(flowPos) * 0.5 + 0.5;
+          float wave2 = sin(flowPos * 2.2 + 1.4) * 0.5 + 0.5;
+          float fluidStream = mix(wave1, wave2, 0.45);
+
+          // Systolic ejection surge modulation
+          float surge = fluidStream * (0.45 + 0.55 * uPulse);
+
+          // Fresnel rim transparency for 3D liquid volume inside translucent vessel wall
+          vec3 normal = normalize(vNormal);
+          vec3 viewDir = normalize(vViewPosition);
+          float fresnel = pow(1.0 - abs(dot(normal, viewDir)), 1.6);
+
+          // Final fluid luminance and alpha
+          float finalAlpha = clamp(uBaseOpacity + surge * 0.35 + fresnel * 0.18, 0.08, 0.85);
+          vec3 finalColor = uBloodColor + vec3(surge * 0.22);
+
+          gl_FragColor = vec4(finalColor, finalAlpha);
+        },
+      `,
+      transparent: true,
+      depthWrite: false,
+      side: THREE.DoubleSide,
+      blending: THREE.AdditiveBlending
+    });
   }
 
   initFlowCircuits() {
     // ================================================================
-    // ARTERIAL OUTFLOW: Heart → Systemic Arteries → Periphery
-    // Each path follows actual vessel topology from the vascular network
+    // ARTERIAL OUTFLOW (Lumen flow: Heart → Systemic Arteries)
     // ================================================================
 
-    // --- Heart → Ascending Aorta → Arch → R. Carotid → Head ---
-    this.addArterialStream([
+    // --- Ascending Aorta → Arch → R. Carotid ---
+    this.addFluidStream([
       [-1,133,2], [-2,146,2], [-1,148.5,1], [2,149,1],
       [3,153,1.5], [3.5,157,2], [3.5,161,2], [3,165,2.5], [4,169,2], [5,173,1.5]
-    ], 40, 0.06, 0.65);
+    ], 0.38, "#94A3B8", true, 0.40);
 
-    // --- Heart → Aorta → Arch → L. Carotid → Head ---
-    this.addArterialStream([
+    // --- Ascending Aorta → Arch → L. Carotid ---
+    this.addFluidStream([
       [-1,133,2], [-2,146,2], [-1,148.5,1], [-2,149.5,0.5],
       [-3,153,1], [-3.5,157,1.5], [-3.5,161,2], [-3,165,2], [-4,169,2], [-5,173,1.5]
-    ], 40, 0.06, 0.65);
+    ], 0.38, "#94A3B8", true, 0.40);
 
-    // --- Heart → Aorta → R. Subclavian → R. Brachial → R. Hand ---
-    this.addArterialStream([
+    // --- Aorta → R. Subclavian / Arm ---
+    this.addFluidStream([
       [-1,133,2], [-2,146,2], [-1,148.5,1], [3,149,1],
       [7,148,0.5], [12,147,0], [20,145,0], [22,130,0], [23,100,0], [24.5,87,0.5], [25,82,0]
-    ], 45, 0.05, 0.6);
+    ], 0.35, "#A7B4C2", true, 0.38);
 
-    // --- Heart → Aorta → L. Subclavian → L. Brachial → L. Hand ---
-    this.addArterialStream([
+    // --- Aorta → L. Subclavian / Arm ---
+    this.addFluidStream([
       [-1,133,2], [-2,146,2], [-1,148.5,1], [-3,149.5,0.5],
       [-7,148.5,0.5], [-12,147.5,0], [-20,145.5,0], [-22,130,0], [-23,100,0], [-24.5,87,0.5], [-25,82,0]
-    ], 45, 0.05, 0.6);
+    ], 0.35, "#A7B4C2", true, 0.38);
 
-    // --- Heart → Descending Aorta → Abdominal → R. Iliac → R. Femoral → R. Foot ---
-    this.addArterialStream([
+    // --- Descending Thoracic & Abdominal Aorta → Lower Body ---
+    this.addFluidStream([
       [-1,133,2], [-2,146,2], [-2,149,-0.5], [-4,147,-2],
       [-3,138,-3], [-2.5,120,-2.8], [-1.5,100,-2], [-0.5,85,-1], [0,78,0],
       [4,72,0.5], [8,65,0], [8,48,0.5], [8,32,0], [8,15,-1], [7,5,1.5], [7,2,2]
-    ], 65, 0.055, 0.55);
+    ], 0.42, "#B4BEC8", true, 0.42);
 
-    // --- Heart → Descending Aorta → Abdominal → L. Iliac → L. Femoral → L. Foot ---
-    this.addArterialStream([
+    this.addFluidStream([
       [-1,133,2], [-2,146,2], [-2,149,-0.5], [-4,147,-2],
       [-3,138,-3], [-2.5,120,-2.8], [-1.5,100,-2], [-0.5,85,-1], [0,78,0],
       [-4,72,0.5], [-8,65,0], [-8,48,0.5], [-8,32,0], [-8,15,-1], [-7,5,1.5], [-7,2,2]
-    ], 65, 0.055, 0.55);
+    ], 0.42, "#B4BEC8", true, 0.42);
 
-    // --- Abdominal branches (renal + mesenteric) ---
-    this.addArterialStream([
-      [-1.5,100,-2], [1,100,0], [4,100,2], [7,100,3], [10,102,3], [13,103,2]
-    ], 25, 0.04, 0.5);
-    this.addArterialStream([
-      [-1.5,97,-2], [1,96,1], [4,94,3], [5,91,5], [3,88,5]
-    ], 20, 0.04, 0.5);
-
-    // --- Coronary perfusion (local heart) ---
-    this.addArterialStream([
+    // --- Coronary Perfusion (Heart Wall Outflow) ---
+    this.addFluidStream([
       [0,134,2.5], [1.5,132,3], [2,130,2.5], [1,128,1.5], [-0.5,127,1]
-    ], 15, 0.035, 0.7);
-    this.addArterialStream([
+    ], 0.28, "#C1CAD3", true, 0.45);
+    this.addFluidStream([
       [0,134,2.5], [-1.5,132,3], [-2,130,2.5], [-1,128,1.5], [0.5,127,1]
-    ], 15, 0.035, 0.7);
+    ], 0.28, "#C1CAD3", true, 0.45);
 
     // ================================================================
-    // VENOUS RETURN: Periphery → Veins → Heart
+    // VENOUS RETURN (Lumen flow: Periphery → Heart RA)
     // ================================================================
 
-    // --- Head → R. Jugular → SVC → Heart ---
-    this.addVenousStream([
+    // --- Head → Jugular → SVC ---
+    this.addFluidStream([
       [4,165,3], [5,160,2.5], [5,155,2], [5,149,1], [5,143,0.5], [4,138,0], [3.5,133,0]
-    ], 30, 0.05, 0.5);
-
-    // --- Head → L. Jugular → SVC → Heart ---
-    this.addVenousStream([
+    ], 0.36, "#899AA9", false, 0.38);
+    this.addFluidStream([
       [-4,165,3], [-5,160,2.5], [-5,155,2], [-5,149.5,1], [5,149,1], [5,143,0.5], [4,133,0]
-    ], 30, 0.05, 0.5);
+    ], 0.36, "#899AA9", false, 0.38);
 
-    // --- R. Leg → R. Iliac vein → IVC → Heart ---
-    this.addVenousStream([
+    // --- Lower Body → IVC ---
+    this.addFluidStream([
       [8,2,-1], [8,15,-1], [8,32,0], [8,48,0.5], [8,65,0],
       [5,72,0.5], [2,78,1], [2.5,88,0.5], [3,100,-0.5], [3.5,115,-1], [3.5,133,0]
-    ], 50, 0.05, 0.5);
-
-    // --- L. Leg → L. Iliac vein → IVC → Heart ---
-    this.addVenousStream([
+    ], 0.38, "#899AA9", false, 0.38);
+    this.addFluidStream([
       [-8,2,-1], [-8,15,-1], [-8,32,0], [-8,48,0.5], [-8,65,0],
       [-5,72,0.5], [-2,78,1], [2.5,88,0.5], [3,100,-0.5], [3.5,115,-1], [3.5,133,0]
-    ], 50, 0.05, 0.5);
+    ], 0.38, "#899AA9", false, 0.38);
 
-    // --- R. Arm → Subclavian vein → SVC → Heart ---
-    this.addVenousStream([
+    // --- Arms → Subclavian Vein → SVC ---
+    this.addFluidStream([
       [24,82,0], [23,100,0], [22,120,0], [20,145,0], [12,147,0], [5,149,1], [5,143,0.5], [4,133,0]
-    ], 35, 0.045, 0.5);
-
-    // --- L. Arm → Subclavian vein → SVC → Heart ---
-    this.addVenousStream([
+    ], 0.32, "#899AA9", false, 0.36);
+    this.addFluidStream([
       [-24,82,0], [-23,100,0], [-22,120,0], [-20,145.5,0], [-12,147.5,0],
       [-5,149.5,1], [5,149,1], [5,143,0.5], [4,133,0]
-    ], 35, 0.045, 0.5);
+    ], 0.32, "#899AA9", false, 0.36);
 
     // ================================================================
-    // PULMONARY CIRCUIT STUBS (extensible for future lungs)
+    // PULMONARY CIRCUIT
     // ================================================================
-    this.addArterialStream([
+    this.addFluidStream([
       [-1,136,3], [3,135,4], [7,133,5], [10,131,4]
-    ], 15, 0.04, 0.5);
-    this.addArterialStream([
+    ], 0.32, "#9EADB9", true, 0.40);
+    this.addFluidStream([
       [-1,136,3], [-4,135,4], [-8,133,5], [-11,131,4]
-    ], 15, 0.04, 0.5);
-    // Pulmonary venous return
-    this.addVenousStream([
-      [10,131,4], [7,130,3], [4,130,2], [2,133,1]
-    ], 12, 0.04, 0.5);
-    this.addVenousStream([
-      [-11,131,4], [-7,130,3], [-4,130,2], [-2,133,1]
-    ], 12, 0.04, 0.5);
+    ], 0.32, "#9EADB9", true, 0.40);
   }
 
-  addArterialStream(bodyPts, count, particleSize, baseSpeed) {
+  addFluidStream(bodyPts, radius, colorHex, isArterial = true, opacity = 0.35) {
     const worldPts = bodyPts.map(p => this.bw(p[0], p[1], p[2]));
     const curve = new THREE.CatmullRomCurve3(worldPts);
-    this.createStream(curve, count, 0xCBD5E1, particleSize, baseSpeed);
-  }
+    
+    // Geometry constrained strictly inside the inner lumen of the vessel
+    const geometry = new THREE.TubeGeometry(curve, 48, radius, 14, false);
+    const material = this.createFluidMaterial(colorHex, isArterial, opacity);
+    const mesh = new THREE.Mesh(geometry, material);
 
-  addVenousStream(bodyPts, count, particleSize, baseSpeed) {
-    const worldPts = bodyPts.map(p => this.bw(p[0], p[1], p[2]));
-    const curve = new THREE.CatmullRomCurve3(worldPts);
-    // Venous flow uses a slightly cooler/darker tint
-    this.createStream(curve, count, 0x94A3B8, particleSize, baseSpeed);
-  }
-
-  createStream(curve, count, colorHex, particleSize, baseSpeed) {
-    const geometry = new THREE.BufferGeometry();
-    const positions = new Float32Array(count * 3);
-    const progress = new Float32Array(count);
-    const speeds = new Float32Array(count);
-
-    for (let i = 0; i < count; i++) {
-      progress[i] = i / count;
-      speeds[i] = baseSpeed * (0.85 + Math.random() * 0.3);
-
-      const pt = curve.getPointAt(progress[i]);
-      positions[i * 3] = pt.x;
-      positions[i * 3 + 1] = pt.y;
-      positions[i * 3 + 2] = pt.z;
-    }
-
-    geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-
-    const material = new THREE.PointsMaterial({
-      color: new THREE.Color(colorHex),
-      size: particleSize,
-      map: this.glowTexture,
-      transparent: true,
-      opacity: 0.55,
-      blending: THREE.AdditiveBlending,
-      depthWrite: false
-    });
-
-    const points = new THREE.Points(geometry, material);
-    this.flowGroup.add(points);
-
-    this.particleStreams.push({
-      points,
-      curve,
-      count,
-      progress,
-      speeds,
-      geometry
-    });
+    this.flowGroup.add(mesh);
+    this.fluidStreams.push({ mesh, material });
   }
 
   update(delta, time) {
     if (!this.flowGroup.visible) return;
 
-    // Simulate cardiac cycle pulsation (Systole = rapid acceleration, Diastole = steady filling)
+    // Synchronize fluid propagation wave with cardiac pumping cycle (systolic ejection pulse)
     const beatFrequency = (this.heartRateBpm / 60) * Math.PI * 2;
     const cardiacPhase = (Math.sin(time * beatFrequency) + 1.0) / 2.0;
-    // Systolic ejection surge
-    const pulseFactor = 0.75 + Math.pow(cardiacPhase, 4) * 1.5;
+    // Systolic ejection surge calculation
+    const pulseFactor = Math.pow(cardiacPhase, 3.5);
 
-    for (const stream of this.particleStreams) {
-      const posAttr = stream.geometry.attributes.position;
-      const positions = posAttr.array;
-
-      for (let i = 0; i < stream.count; i++) {
-        stream.progress[i] += stream.speeds[i] * delta * 0.45 * pulseFactor;
-        if (stream.progress[i] > 1.0) {
-          stream.progress[i] -= 1.0;
-        }
-
-        const pt = stream.curve.getPointAt(stream.progress[i]);
-        positions[i * 3] = pt.x;
-        positions[i * 3 + 1] = pt.y;
-        positions[i * 3 + 2] = pt.z;
-      }
-
-      posAttr.needsUpdate = true;
+    for (const stream of this.fluidStreams) {
+      stream.material.uniforms.uTime.value = time;
+      stream.material.uniforms.uPulse.value = pulseFactor;
     }
   }
 
@@ -256,6 +224,6 @@ export class CardiacFlowSystem {
       if (child.geometry) child.geometry.dispose();
       if (child.material) child.material.dispose();
     }
-    this.particleStreams = [];
+    this.fluidStreams = [];
   }
 }
