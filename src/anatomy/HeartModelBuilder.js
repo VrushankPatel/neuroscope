@@ -117,6 +117,7 @@ export class HeartModelBuilder {
               isInteractive: false
             };
 
+            this.registry.registerStructure("heart_pivot", heartPivot);
             this.rootGroup.add(heartPivot);
             this.loadSemanticOverlay(createCorticalShellMaterial, createOrganMaterial, onComplete);
             return;

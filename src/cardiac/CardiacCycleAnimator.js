@@ -178,7 +178,7 @@ export class CardiacCycleAnimator {
     if (this.originalTransforms) return;
     this.originalTransforms = new Map();
 
-    const structures = ["left_ventricle", "right_ventricle", "septum", "left_atrium", "right_atrium", "pericardium", "valves", "aorta", "pulmonary_artery", "superior_vena_cava", "coronary_arteries"];
+    const structures = ["heart_pivot", "left_ventricle", "right_ventricle", "septum", "left_atrium", "right_atrium", "pericardium", "valves", "aorta", "pulmonary_artery", "superior_vena_cava", "inferior_vena_cava", "coronary_arteries"];
     structures.forEach(id => {
       const mesh = this.registry.getStructure(id);
       if (mesh) {
@@ -194,6 +194,7 @@ export class CardiacCycleAnimator {
   applyCardiacMechanics(phase) {
     this.storeOriginalTransforms();
 
+    const pivotMesh = this.registry.getStructure("heart_pivot");
     const lvMesh = this.registry.getStructure("left_ventricle");
     const rvMesh = this.registry.getStructure("right_ventricle");
     const laMesh = this.registry.getStructure("left_atrium");
@@ -231,8 +232,24 @@ export class CardiacCycleAnimator {
       vTorsion = 0;
     }
 
-    // Concentric contraction helper that anchors the base of the chamber
-    // preventing vertical translation up and down
+    // 1. Animate main 3D presentation heart model pivot
+    if (pivotMesh) {
+      const orig = this.originalTransforms.get("heart_pivot");
+      if (orig) {
+        const scaleX = orig.scale.x * (1.0 - vSqueeze * 0.95);
+        const scaleZ = orig.scale.z * (1.0 - vSqueeze * 0.95);
+        const scaleY = orig.scale.y * (1.0 - vSqueeze * 0.35 + aSqueeze * 0.15);
+
+        pivotMesh.scale.set(scaleX, scaleY, scaleZ);
+        pivotMesh.rotation.set(
+          orig.rotation.x,
+          orig.rotation.y + vTorsion,
+          orig.rotation.z
+        );
+      }
+    }
+
+    // 2. Animate individual structure meshes (semantic overlay or multi-part meshes)
     const applyVentricularDeformation = (mesh, origKey) => {
       const orig = this.originalTransforms.get(origKey);
       if (!mesh || !orig) return;
