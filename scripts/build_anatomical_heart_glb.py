@@ -406,7 +406,13 @@ def build_heart_glb(output_filepath):
         return all_pos, all_norm, all_idx
 
     # =========================================================================
-    # BUILD ALL 11 ANATOMICAL HEART STRUCTURES
+    # BUILD SEMANTICALLY SEPARATED HEART STRUCTURES
+    #
+    # The IDs below are deliberately stable.  The viewer uses the mesh name as
+    # the anatomy identifier, which lets raycasting report the actual chamber
+    # or valve instead of guessing from a hit point on one combined surface.
+    # Coordinates use +Z as anterior, -Z as posterior, +Y as superior and +X
+    # as anatomical right before the small cardiac-axis rotation in the viewer.
     # =========================================================================
 
     root_children = []
@@ -458,19 +464,23 @@ def build_heart_glb(output_filepath):
     pa_merged = merge_mesh_data([pa_trunk, left_pa, right_pa])
     root_children.append(create_mesh_node("pulmonary_artery", pa_merged[0], pa_merged[1], pa_merged[2]))
 
-    # 9. Superior Vena Cava & Inferior Vena Cava
+    # 9. Superior and Inferior Vena Cavae — independent meshes so each can be
+    # labelled instead of presenting a single ambiguous vena-cava tooltip.
     svc_tube = generate_tube([[0.82, 0.85, 0.02], [0.82, 1.44, -0.02], [0.82, 1.98, -0.04]], 0.18, 24, 16, flare_root=True)
     ivc_tube = generate_tube([[0.76, 0.20, 0.02], [0.76, -0.34, 0.01], [0.76, -0.78, 0.00]], 0.17, 20, 16, flare_root=True)
-    vc_merged = merge_mesh_data([svc_tube, ivc_tube])
-    root_children.append(create_mesh_node("superior_vena_cava", vc_merged[0], vc_merged[1], vc_merged[2]))
+    root_children.append(create_mesh_node("superior_vena_cava", svc_tube[0], svc_tube[1], svc_tube[2]))
+    root_children.append(create_mesh_node("inferior_vena_cava", ivc_tube[0], ivc_tube[1], ivc_tube[2]))
 
-    # 10. Cardiac Valves (Mitral, Tricuspid, Aortic, Pulmonary Annuli)
+    # 10. Cardiac valves — keep all four annuli independent for accurate hover
+    # labels and targeted educational overlays.
     valve_tube1 = generate_tube([[-0.24, 0.30, -0.12], [-0.22, 0.28, -0.10]], 0.28, 12, 16)
     valve_tube2 = generate_tube([[0.32, 0.22, 0.22], [0.30, 0.20, 0.20]], 0.30, 12, 16)
     valve_tube3 = generate_tube([[0.00, 0.40, 0.12], [0.02, 0.38, 0.10]], 0.22, 12, 16)
     valve_tube4 = generate_tube([[0.20, 0.52, 0.32], [0.18, 0.50, 0.30]], 0.20, 12, 16)
-    valves_merged = merge_mesh_data([valve_tube1, valve_tube2, valve_tube3, valve_tube4])
-    root_children.append(create_mesh_node("valves", valves_merged[0], valves_merged[1], valves_merged[2]))
+    root_children.append(create_mesh_node("mitral_valve", valve_tube1[0], valve_tube1[1], valve_tube1[2]))
+    root_children.append(create_mesh_node("tricuspid_valve", valve_tube2[0], valve_tube2[1], valve_tube2[2]))
+    root_children.append(create_mesh_node("aortic_valve", valve_tube3[0], valve_tube3[1], valve_tube3[2]))
+    root_children.append(create_mesh_node("pulmonary_valve", valve_tube4[0], valve_tube4[1], valve_tube4[2]))
 
     # 11. Coronary Arteries (LAD, LCx, RCA, Diagonals, Marginals)
     lad = generate_tube([[-0.06, 0.48, 0.24], [0.04, 0.22, 0.38], [-0.02, -0.12, 0.38], [-0.16, -0.52, 0.32], [-0.32, -0.80, 0.24]], 0.040, 36, 12)

@@ -45,6 +45,10 @@ export class HeartModelBuilder {
         });
       };
 
+      // The presentation mesh preserves the detailed external heart surface.
+      // A project-owned multipart GLB is loaded underneath as a semantic hit
+      // model; keeping those responsibilities separate avoids pretending that
+      // arbitrary triangles in a fused scan are labelled anatomy.
       this.gltfLoader.load(
         '/heart.glb',
         (gltf) => {
@@ -63,9 +67,11 @@ export class HeartModelBuilder {
           heartPivot.add(rawModel);
           heartPivot.scale.set(scaleFactor, scaleFactor, scaleFactor);
           
-          // Correct rotation: turn anterior face of heart forward (+Z) toward camera
-          heartPivot.rotation.y = Math.PI - Math.PI / 7;
-          heartPivot.rotation.x = 0.08;
+          // The source presentation mesh is authored with its anterior surface
+          // facing -Z.  A 180° turn places the sternocostal (chest-facing)
+          // surface toward the default +Z camera without the former side yaw.
+          heartPivot.rotation.y = Math.PI;
+          heartPivot.rotation.x = 0;
           heartPivot.position.set(0, 0, 0);
 
           heartPivot.updateMatrixWorld(true);
@@ -78,7 +84,9 @@ export class HeartModelBuilder {
           });
 
           if (meshesFound.length === 1) {
-            // Single unified 3D anatomical heart mesh (e.g. heart.glb)
+            // Compatibility path for an externally supplied unified model.
+            // It is intentionally marked as an approximation: proper anatomy
+            // labels require a multipart model such as anatomical_heart.glb.
             const singleMesh = meshesFound[0];
             const hasTex = !!(singleMesh.material && singleMesh.material.map);
             
@@ -100,18 +108,18 @@ export class HeartModelBuilder {
             }
 
             singleMesh.userData = {
-              structureId: "left_ventricle",
               originalName: "Anatomical Human Heart",
-              category: "ventricle",
               color: "#A7B4C2",
-              hasOriginalTexture: hasTex
+              hasOriginalTexture: hasTex,
+              // A fused display mesh must never consume a raycast intended for
+              // a named anatomical structure.  The semantic overlay below is
+              // the only interactive representation.
+              isInteractive: false
             };
 
-            // Register under primary structure keys so all UI/animations locate the mesh
-            const primaryKeys = ["left_ventricle", "right_ventricle", "septum", "left_atrium", "right_atrium", "pericardium", "aorta", "pulmonary_artery", "superior_vena_cava", "valves", "coronary_arteries"];
-            primaryKeys.forEach(key => {
-              this.registry.registerStructure(key, singleMesh);
-            });
+            this.rootGroup.add(heartPivot);
+            this.loadSemanticOverlay(createCorticalShellMaterial, createOrganMaterial, onComplete);
+            return;
           } else {
             // Multi-part anatomical heart model
             meshesFound.forEach((child) => {
@@ -129,6 +137,11 @@ export class HeartModelBuilder {
                 aorta: { color: "#B4BEC8", opacity: 0.52 },
                 pulmonary_artery: { color: "#9EADB9", opacity: 0.52 },
                 superior_vena_cava: { color: "#899AA9", opacity: 0.52 },
+                inferior_vena_cava: { color: "#718096", opacity: 0.52 },
+                mitral_valve: { color: "#E9D5FF", opacity: 0.68 },
+                tricuspid_valve: { color: "#C4B5FD", opacity: 0.68 },
+                aortic_valve: { color: "#FDE68A", opacity: 0.68 },
+                pulmonary_valve: { color: "#BAE6FD", opacity: 0.68 },
                 valves: { color: "#D4DBE2", opacity: 0.65 },
                 coronary_arteries: { color: "#C1CAD3", opacity: 0.65 }
               };
@@ -139,7 +152,11 @@ export class HeartModelBuilder {
                 structureId: structId,
                 originalName: child.name || "Anatomical Structure",
                 category: category,
-                color: style.color
+                color: style.color,
+                // The shell is a visual context layer.  If it participated in
+                // raycasts it would intercept every hover before the chamber
+                // or vessel beneath it could be identified.
+                isInteractive: structId !== "pericardium"
               };
               
               if (structId === "pericardium") {
@@ -172,6 +189,100 @@ export class HeartModelBuilder {
     }
 
     return this.rootGroup;
+  }
+
+  /**
+   * Load the lightweight, project-owned GLB that contains one mesh per
+   * anatomical structure.  It is deliberately non-rendering: it gives the
+   * detailed display asset precise, stable hit targets without visually
+   * covering it with a second approximate heart.
+   */
+  loadSemanticOverlay(createCorticalShellMaterial, createOrganMaterial, onComplete) {
+    this.gltfLoader.load(
+      '/anatomical_heart.glb',
+      (gltf) => {
+        const semanticModel = gltf.scene;
+        const box = new THREE.Box3().setFromObject(semanticModel);
+        const center = box.getCenter(new THREE.Vector3());
+        const size = box.getSize(new THREE.Vector3());
+        const maxDim = Math.max(size.x, size.y, size.z);
+
+        semanticModel.position.sub(center);
+
+        const semanticPivot = new THREE.Group();
+        semanticPivot.name = 'AnatomicalHeartSemanticOverlay';
+        semanticPivot.add(semanticModel);
+        semanticPivot.scale.setScalar(3.6 / maxDim);
+        // The owned asset is authored with +Z as anterior, so no turn is
+        // required for the default chest-front camera orientation.
+        semanticPivot.rotation.set(0, 0, 0);
+        semanticPivot.updateMatrixWorld(true);
+
+        semanticModel.traverse((child) => {
+          if (!child.isMesh) return;
+
+          const structureId = this.mapPartNameToStructureId(child.name);
+          const category = this.getCategoryForStructure(structureId);
+          const style = this.getHeartPartStyle(structureId);
+
+          child.userData = {
+            structureId,
+            originalName: child.name,
+            category,
+            color: style.color,
+            isInteractive: structureId !== 'pericardium',
+            isSemanticHitTarget: true
+          };
+
+          child.material = structureId === 'pericardium'
+            ? createCorticalShellMaterial(style.color)
+            : createOrganMaterial(style.color, '#000000', 0.0, style.opacity);
+          // Keep the material renderable for Mesh.raycast, but suppress its
+          // colour and depth writes so the visible high-fidelity heart remains
+          // unobscured.  Setting material.visible = false would also disable
+          // its intersection test in Three.js.
+          child.material.transparent = true;
+          child.material.opacity = 0;
+          child.material.depthWrite = false;
+          child.material.colorWrite = false;
+          child.userData.isShell = structureId === 'pericardium';
+          this.registry.registerStructure(structureId, child);
+        });
+
+        this.rootGroup.add(semanticPivot);
+        this.onModelLoadedCallbacks.forEach(cb => cb(semanticPivot, semanticModel));
+        if (onComplete) onComplete(this.rootGroup);
+      },
+      undefined,
+      (error) => {
+        console.warn('Semantic heart overlay loading fallback:', error);
+        this.buildAuthenticHeartModel(createCorticalShellMaterial, createOrganMaterial, () => {
+          if (onComplete) onComplete(this.rootGroup);
+        });
+      }
+    );
+  }
+
+  getHeartPartStyle(structureId) {
+    const colorsMap = {
+      pericardium: { color: '#667686', opacity: 0.20 },
+      left_ventricle: { color: '#A7B4C2', opacity: 0.45 },
+      right_ventricle: { color: '#8FA0B2', opacity: 0.45 },
+      septum: { color: '#B8C3CE', opacity: 0.50 },
+      left_atrium: { color: '#A1AFBC', opacity: 0.42 },
+      right_atrium: { color: '#91A2B3', opacity: 0.42 },
+      aorta: { color: '#B4BEC8', opacity: 0.52 },
+      pulmonary_artery: { color: '#9EADB9', opacity: 0.52 },
+      superior_vena_cava: { color: '#899AA9', opacity: 0.52 },
+      inferior_vena_cava: { color: '#718096', opacity: 0.52 },
+      mitral_valve: { color: '#E9D5FF', opacity: 0.68 },
+      tricuspid_valve: { color: '#C4B5FD', opacity: 0.68 },
+      aortic_valve: { color: '#FDE68A', opacity: 0.68 },
+      pulmonary_valve: { color: '#BAE6FD', opacity: 0.68 },
+      valves: { color: '#D4DBE2', opacity: 0.65 },
+      coronary_arteries: { color: '#C1CAD3', opacity: 0.65 }
+    };
+    return colorsMap[structureId] || { color: '#A7B4C2', opacity: 0.45 };
   }
 
   buildAuthenticHeartModel(createCorticalShellMaterial, createOrganMaterial, onComplete) {
@@ -670,6 +781,10 @@ export class HeartModelBuilder {
   mapPartNameToStructureId(name) {
     const n = (name || "").toLowerCase();
     if (n.includes("pericard") || n.includes("shell") || n.includes("epicard")) return "pericardium";
+    if (n.includes("mitral")) return "mitral_valve";
+    if (n.includes("tricuspid")) return "tricuspid_valve";
+    if (n.includes("aortic_valve")) return "aortic_valve";
+    if (n.includes("pulmonary_valve")) return "pulmonary_valve";
     if (n.includes("aorta")) return "aorta";
     if (n.includes("pulmonary_artery") || n.includes("pulmonary_trunk") || (n.includes("pulmonary") && !n.includes("valve"))) return "pulmonary_artery";
     if (n.includes("left") && n.includes("ventricle")) return "left_ventricle";
@@ -677,7 +792,8 @@ export class HeartModelBuilder {
     if (n.includes("left") && (n.includes("atrium") || n.includes("cardiac_atrium"))) return "left_atrium";
     if (n.includes("right") && (n.includes("atrium") || n.includes("cardiac_atrium"))) return "right_atrium";
     if (n.includes("septum") || n.includes("papillary")) return "septum";
-    if (n.includes("cava") || n.includes("svc") || n.includes("ivc")) return "superior_vena_cava";
+    if (n.includes("inferior") || n.includes("ivc")) return "inferior_vena_cava";
+    if (n.includes("cava") || n.includes("svc")) return "superior_vena_cava";
     if (n.includes("valve")) return "valves";
     if (n.includes("coronary")) return "coronary_arteries";
     

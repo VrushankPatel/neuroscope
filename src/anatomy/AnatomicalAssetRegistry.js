@@ -41,7 +41,11 @@ export class AnatomicalAssetRegistry {
   }
 
   getAllMeshes() {
-    return Array.from(this.structureMap.values());
+    return Array.from(new Set(this.structureMap.values()));
+  }
+
+  getInteractiveMeshes() {
+    return this.getAllMeshes().filter(mesh => mesh.userData?.isInteractive !== false);
   }
 
   isShellMesh(mesh) {
@@ -245,6 +249,11 @@ export class AnatomicalAssetRegistry {
         aorta: "#B4BEC8",
         pulmonary_artery: "#9EADB9",
         superior_vena_cava: "#899AA9",
+        inferior_vena_cava: "#718096",
+        mitral_valve: "#E9D5FF",
+        tricuspid_valve: "#C4B5FD",
+        aortic_valve: "#FDE68A",
+        pulmonary_valve: "#BAE6FD",
         valves: "#D4DBE2",
         coronary_arteries: "#C1CAD3",
 
@@ -275,6 +284,11 @@ export class AnatomicalAssetRegistry {
         aorta: "#B4BEC8",
         pulmonary_artery: "#9EADB9",
         superior_vena_cava: "#899AA9",
+        inferior_vena_cava: "#718096",
+        mitral_valve: "#E9D5FF",
+        tricuspid_valve: "#C4B5FD",
+        aortic_valve: "#FDE68A",
+        pulmonary_valve: "#BAE6FD",
         valves: "#D4DBE2",
         coronary_arteries: "#C1CAD3",
 

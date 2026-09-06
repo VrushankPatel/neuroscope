@@ -75,7 +75,7 @@ export class CardiacFlowSystem {
           vec3 finalColor = uBloodColor + vec3(surge * 0.22);
 
           gl_FragColor = vec4(finalColor, finalAlpha);
-        },
+        }
       `,
       transparent: true,
       depthWrite: false,

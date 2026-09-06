@@ -424,8 +424,10 @@ class NeuroScopeApp {
             this.cardiacFlow.hide();
             this.cardiacCycle.show();
           } else {
-            // explore mode
-            this.cardiacFlow.show();
+            // Keep the anatomy view legible.  The body-scale flow network is
+            // available from Blood Flow or the Flow toggle; rendering it by
+            // default obscures the anterior cardiac surface and hover targets.
+            this.cardiacFlow.hide();
             this.cardiacCycle.hide();
           }
 

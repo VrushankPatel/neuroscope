@@ -27,8 +27,10 @@ export class AnatomySelectionManager {
     let curr = object;
     while (curr) {
       if (curr.userData && curr.userData.structureId) {
-        // If single mesh (e.g. heart.glb), resolve exact anatomical structure from 3D point
-        if ((curr.userData.hasOriginalTexture || curr.userData.structureId === "left_ventricle") && point) {
+        // Unified imported meshes have no semantic submeshes, so this is only a
+        // best-effort fallback.  Multipart models must return their actual mesh
+        // identifier—never remap a genuine left ventricle by its screen point.
+        if (curr.userData.isUnifiedHeartMesh && point) {
           const pivot = curr.parent ? curr.parent : curr;
           const localPt = pivot.worldToLocal(point.clone());
 
@@ -68,7 +70,7 @@ export class AnatomySelectionManager {
     this.mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
 
     this.raycaster.setFromCamera(this.mouse, this.camera);
-    const intersects = this.raycaster.intersectObjects(this.registry.getAllMeshes());
+    const intersects = this.raycaster.intersectObjects(this.registry.getInteractiveMeshes());
 
     if (intersects.length > 0) {
       const structureId = this.getStructureIdFromObject(intersects[0].object, intersects[0].point);
@@ -115,7 +117,7 @@ export class AnatomySelectionManager {
     this.mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
 
     this.raycaster.setFromCamera(this.mouse, this.camera);
-    const intersects = this.raycaster.intersectObjects(this.registry.getAllMeshes());
+    const intersects = this.raycaster.intersectObjects(this.registry.getInteractiveMeshes());
 
     if (intersects.length > 0) {
       const structureId = this.getStructureIdFromObject(intersects[0].object, intersects[0].point);
